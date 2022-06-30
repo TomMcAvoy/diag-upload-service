@@ -1,0 +1,11 @@
+{
+  "arrowParens": "always",
+  "bracketSpacing": false,
+  "jsonRecursiveSort": true,
+  "jsxSingleQuote": true,
+  "printWidth": 120,
+  "quoteProps": "consistent",
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "none"
+}

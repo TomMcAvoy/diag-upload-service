@@ -1,0 +1,23 @@
+{
+  "name": "diag-upload-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "ts-node-dev --respawn --transpile-only src/server",
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "express": "^4.18.1",
+    "express-fileupload": "^1.4.0",
+    "node-fetch": "^3.2.6"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.12"
+  }
+}

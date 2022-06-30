@@ -1,0 +1,1 @@
+export default 'https://c.tenor.com/QiJZATyPvZ0AAAAd/goat-hello.gif'
