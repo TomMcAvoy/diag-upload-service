@@ -44,7 +44,7 @@ node_modules
 **/dist/**
 !packages/zeus/dist/dummy.txt
 build
-public
+# public
 *.zip
 *.d.ts
 packages/end2end/output
