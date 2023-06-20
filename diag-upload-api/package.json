@@ -4,7 +4,7 @@
   "description": "Diag Upload API",
   "main": "index.js",
   "scripts": {
-    "start": "npx ts-node-dev --respawn --transpile-only src/server",
+    "start": "ts-node-dev --respawn --transpile-only src/server",
     "test": "jest"
   },
   "author": "",
@@ -16,6 +16,7 @@
     "express-fileupload": "^1.4.0",
     "node-fetch": "^3.3.1",
     "ts-node": "^10.9.1",
+    "ts-node-dev": "^2.0.0",
     "typescript": "^5.1.3"
   }
 }
