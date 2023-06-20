@@ -1,0 +1,248 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`renders learn react link 1`] = `
+<div
+  className="App"
+>
+  <header
+    className="App-header"
+  >
+    <h1>
+      Cribl's Diag Upload Service
+    </h1>
+    <p>
+      API Status is: 
+      <a
+        className="App-link"
+        href="https://reactjs.org"
+        id="api-status"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        Offline
+      </a>
+    </p>
+  </header>
+  <main
+    style={
+      Object {
+        "margin": "0 auto",
+        "maxWidth": 760,
+        "minHeight": "80vh",
+        "padding": 20,
+      }
+    }
+  >
+    <a
+      href="/"
+      onClick={[Function]}
+    >
+      &lt; Home
+    </a>
+    <span
+      className="ant-upload-wrapper css-dev-only-do-not-override-12jzuas"
+    >
+      <div
+        className="ant-upload ant-upload-drag css-dev-only-do-not-override-12jzuas"
+        onDragLeave={[Function]}
+        onDragOver={[Function]}
+        onDrop={[Function]}
+        style={
+          Object {
+            "height": undefined,
+          }
+        }
+      >
+        <span
+          className="ant-upload ant-upload-btn"
+          onClick={[Function]}
+          onDragOver={[Function]}
+          onDrop={[Function]}
+          onKeyDown={[Function]}
+          role="button"
+          tabIndex="0"
+        >
+          <input
+            accept=""
+            multiple={false}
+            onChange={[Function]}
+            onClick={[Function]}
+            style={
+              Object {
+                "display": "none",
+              }
+            }
+            type="file"
+          />
+          <div
+            className="ant-upload-drag-container"
+          >
+            <p
+              className="ant-upload-drag-icon"
+            >
+              <span
+                aria-label="inbox"
+                className="anticon anticon-inbox"
+                role="img"
+              >
+                <svg
+                  aria-hidden="true"
+                  data-icon="inbox"
+                  fill="currentColor"
+                  focusable="false"
+                  height="1em"
+                  viewBox="0 0 1024 1024"
+                  width="1em"
+                >
+                  <path
+                    d="M885.2 446.3l-.2-.8-112.2-285.1c-5-16.1-19.9-27.2-36.8-27.2H281.2c-17 0-32.1 11.3-36.9 27.6L139.4 443l-.3.7-.2.8c-1.3 4.9-1.7 9.9-1 14.8-.1 1.6-.2 3.2-.2 4.8V830a60.9 60.9 0 0060.8 60.8h627.2c33.5 0 60.8-27.3 60.9-60.8V464.1c0-1.3 0-2.6-.1-3.7.4-4.9 0-9.6-1.3-14.1zm-295.8-43l-.3 15.7c-.8 44.9-31.8 75.1-77.1 75.1-22.1 0-41.1-7.1-54.8-20.6S436 441.2 435.6 419l-.3-15.7H229.5L309 210h399.2l81.7 193.3H589.4zm-375 76.8h157.3c24.3 57.1 76 90.8 140.4 90.8 33.7 0 65-9.4 90.3-27.2 22.2-15.6 39.5-37.4 50.7-63.6h156.5V814H214.4V480.1z"
+                  />
+                </svg>
+              </span>
+            </p>
+            <p
+              className="ant-upload-text"
+            >
+              Click or drag file to this area to 
+              upload
+            </p>
+            <p
+              className="ant-upload-hint"
+            >
+              Support for a single upload. Strictly prohibit from uploading company data or other band files
+            </p>
+          </div>
+        </span>
+      </div>
+    </span>
+    <div
+      className="ant-table-wrapper css-dev-only-do-not-override-12jzuas"
+    >
+      <div
+        className="ant-spin-nested-loading css-dev-only-do-not-override-12jzuas"
+      >
+        <div
+          className="ant-spin-container"
+        >
+          <div
+            className="ant-table ant-table-empty"
+          >
+            <div
+              className="ant-table-container"
+            >
+              <div
+                className="ant-table-content"
+                onScroll={[Function]}
+                style={Object {}}
+              >
+                <table
+                  style={
+                    Object {
+                      "tableLayout": "auto",
+                    }
+                  }
+                >
+                  <colgroup />
+                  <thead
+                    className="ant-table-thead"
+                  >
+                    <tr>
+                      <th
+                        className="ant-table-cell"
+                        colSpan={null}
+                        onMouseEnter={[Function]}
+                        onMouseLeave={[Function]}
+                        rowSpan={null}
+                        scope="col"
+                        style={Object {}}
+                      >
+                        Name
+                      </th>
+                      <td
+                        className="ant-table-cell"
+                        colSpan={null}
+                        onMouseEnter={[Function]}
+                        onMouseLeave={[Function]}
+                        rowSpan={null}
+                        scope={null}
+                        style={Object {}}
+                      />
+                    </tr>
+                  </thead>
+                  <tbody
+                    className="ant-table-tbody"
+                  >
+                    <tr
+                      className="ant-table-placeholder"
+                      style={
+                        Object {
+                          "display": null,
+                        }
+                      }
+                    >
+                      <td
+                        className="ant-table-cell"
+                        colSpan={2}
+                        onMouseEnter={[Function]}
+                        onMouseLeave={[Function]}
+                        rowSpan={null}
+                        style={Object {}}
+                      >
+                        <div
+                          className="css-dev-only-do-not-override-12jzuas ant-empty ant-empty-normal"
+                        >
+                          <div
+                            className="ant-empty-image"
+                          >
+                            <svg
+                              height="41"
+                              viewBox="0 0 64 41"
+                              width="64"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <g
+                                fill="none"
+                                fillRule="evenodd"
+                                transform="translate(0 1)"
+                              >
+                                <ellipse
+                                  cx="32"
+                                  cy="33"
+                                  fill="#f5f5f5"
+                                  rx="32"
+                                  ry="7"
+                                />
+                                <g
+                                  fillRule="nonzero"
+                                  stroke="#d9d9d9"
+                                >
+                                  <path
+                                    d="M55 12.76L44.854 1.258C44.367.474 43.656 0 42.907 0H21.093c-.749 0-1.46.474-1.947 1.257L9 12.761V22h46v-9.24z"
+                                  />
+                                  <path
+                                    d="M41.613 15.931c0-1.605.994-2.93 2.227-2.931H55v18.137C55 33.26 53.68 35 52.05 35h-40.1C10.32 35 9 33.259 9 31.137V13h11.16c1.233 0 2.227 1.323 2.227 2.928v.022c0 1.605 1.005 2.901 2.237 2.901h14.752c1.232 0 2.237-1.308 2.237-2.913v-.007z"
+                                    fill="#fafafa"
+                                  />
+                                </g>
+                              </g>
+                            </svg>
+                          </div>
+                          <div
+                            className="ant-empty-description"
+                          >
+                            No data
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+`;
