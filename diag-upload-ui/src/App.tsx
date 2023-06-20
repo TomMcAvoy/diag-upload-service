@@ -57,6 +57,7 @@ const Layout = ({setAppState}: {setAppState: (s: string) => void}) => {
           Cribl's Diag Upload Service
         </h1>
         <p>API Status is: <a
+            id="api-status"
             className="App-link"
             href="https://reactjs.org"
             target="_blank"
