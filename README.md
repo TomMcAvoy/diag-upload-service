@@ -6,12 +6,12 @@ Cribl Cloud Diag Upload Service
 - With globally installed `npm` or accessed via `npx`
     + From the root of your cloned repo,
         - `cd` into `packages/diag-upload-api`
-        - Do `pnpm install` to install the dependencies
-        - Then `pnpm start` to start the api.
+        - Do `npm install` to install the dependencies
+        - Then `npm start` to start the api.
     + From the root of your cloned repo,
         - `cd` into `packages/diag-upload-ui`
-        - Do `pnpm install` to install the dependencies
-        - Then `pnpm start` to start the react app.
+        - Do `npm install` to install the dependencies
+        - Then `npm start` to start the react app.
 
 ## API
 Create a RESTful API to:
