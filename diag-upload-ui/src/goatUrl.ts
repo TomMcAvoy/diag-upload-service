@@ -1,1 +1,2 @@
-export default 'https://c.tenor.com/QiJZATyPvZ0AAAAd/goat-hello.gif'
+const goatUrl = 'https://c.tenor.com/QiJZATyPvZ0AAAAd/goat-hello.gif'
+export default goatUrl
