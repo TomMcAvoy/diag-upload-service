@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# Add all changes
+git add .
+
+# Commit changes with a default message
+git commit -m "Auto-commit on file save"
