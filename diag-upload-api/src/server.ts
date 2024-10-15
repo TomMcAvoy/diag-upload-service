@@ -1,10 +1,10 @@
 import express from 'express';
-import fileUpload, { UploadedFile } from 'express-fileupload';
+import fileUpload, {UploadedFile} from 'express-fileupload';
 import path from 'path';
-import { Kafka } from 'kafkajs';
-import { MongoClient } from 'mongodb';
+import {Kafka} from 'kafkajs';
+import {MongoClient} from 'mongodb';
 import http from 'http';
-import { Server } from 'socket.io';
+import {Server} from 'socket.io';
 import Redis from 'ioredis';
 
 const app = express();
@@ -30,7 +30,7 @@ runProducer().catch(console.error);
 // Initialize MongoDB client
 const mongoClient = new MongoClient('mongodb://localhost:27017');
 let db;
-mongoClient.connect().then(client => {
+mongoClient.connect().then((client) => {
   db = client.db('fileUploadService');
 });
 
@@ -76,16 +76,14 @@ app.post('/upload', async (req, res) => {
     // Send file data to Kafka
     await producer.send({
       topic: 'file-uploads',
-      messages: [
-        { key: file.name, value: file.data.toString('base64') }
-      ],
+      messages: [{key: file.name, value: file.data.toString('base64')}]
     });
 
     // Store initial status in database
-    await db.collection('fileStatuses').insertOne({ fileId: file.name, status: 'Uploaded to Kafka' });
+    await db.collection('fileStatuses').insertOne({fileId: file.name, status: 'Uploaded to Kafka'});
 
     // Respond with success notification
-    res.json({ message: 'File uploaded successfully and sent to Kafka' });
+    res.json({message: 'File uploaded successfully and sent to Kafka'});
   } catch (error) {
     console.error('Error sending file to Kafka:', error);
     res.status(500).send('Error uploading file');
@@ -93,16 +91,16 @@ app.post('/upload', async (req, res) => {
 });
 
 app.post('/status-update', async (req, res) => {
-  const { status, fileId } = req.body;
+  const {status, fileId} = req.body;
 
   // Update status in database
-  await db.collection('fileStatuses').updateOne({ fileId }, { $set: { status } });
+  await db.collection('fileStatuses').updateOne({fileId}, {$set: {status}});
 
   // Publish status update to Redis
   const channel = `file-status-${fileId}`;
-  redis.publish(channel, JSON.stringify({ fileId, status }));
+  redis.publish(channel, JSON.stringify({fileId, status}));
 
-  res.json({ message: 'Status update received' });
+  res.json({message: 'Status update received'});
 });
 
 server.listen(port, () => {
