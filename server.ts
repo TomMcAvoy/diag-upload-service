@@ -6,6 +6,8 @@ import { MongoClient } from 'mongodb';
 import http from 'http';
 import { Server } from 'socket.io';
 import Redis from 'ioredis';
+import fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
 const port = 8000;
@@ -41,27 +43,34 @@ const io = new Server(server);
 // Initialize Redis
 const redis = new Redis();
 
-io.on('connection', (socket) => {
-  console.log('A user connected');
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
 
-  // Subscribe to Redis channels
-  socket.on('subscribe', (fileId) => {
-    const channel = `file-status-${fileId}`;
-    redis.subscribe(channel, (err, count) => {
-      if (err) {
-        console.error('Failed to subscribe: %s', err.message);
-      } else {
-        console.log(`Subscribed to ${channel}. Now subscribed to ${count} channel(s).`);
-      }
+io.on('connection', (socket) => {
+  console.log('Client connected');
+
+  socket.on('start-upload', (data) => {
+    const { fileName, fileSize } = data;
+    const fileId = uuidv4();
+    const filePath = path.join(uploadDir, fileId);
+
+    socket.emit('upload-id', { fileId });
+
+    socket.on(`upload-chunk-${fileId}`, (chunk) => {
+      fs.appendFileSync(filePath, chunk);
+      socket.emit(`chunk-received-${fileId}`);
     });
 
-    redis.on('message', (channel, message) => {
-      socket.emit('statusUpdate', JSON.parse(message));
+    socket.on(`upload-complete-${fileId}`, () => {
+      console.log(`File upload complete: ${filePath}`);
+      socket.emit(`upload-success-${fileId}`);
     });
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected');
+    console.log('Client disconnected');
   });
 });
 
@@ -106,5 +115,5 @@ app.post('/status-update', async (req, res) => {
 });
 
 server.listen(port, () => {
-  console.log(`App is listening on port ${port}!`);
+  console.log(`Server is listening on port ${port}`);
 });
