@@ -104,6 +104,7 @@ app.post('/upload', async (req, res) => {
 app.post('/status-update', async (req, res) => {
   const { status, fileId } = req.body;
 
+
   // Update status in database
   await db.collection('fileStatuses').updateOne({ fileId }, { $set: { status } });
 
