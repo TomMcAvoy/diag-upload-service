@@ -7,7 +7,9 @@ import {
   Link
 } from "react-router-dom";
 import './App.css';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import FileInfo from './components/FileInfo';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Files from './components/Files';
 import Uploader from './components/Uploader';
 import { fetcher, uploadFile, getAllFiles, deleteFile, FileType } from './utils';
