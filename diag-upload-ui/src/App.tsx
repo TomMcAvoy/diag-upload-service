@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { fetcher, uploadFile, getAllFiles, getFileMeta, deleteFile, FileType } from './utils';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Outlet,
+  Link
+} from "react-router-dom";
 import './App.css';
+import FileInfo from './components/FileInfo';
+import Files from './components/Files';
+import Uploader from './components/Uploader';
+import { fetcher, uploadFile, getAllFiles, deleteFile, FileType } from './utils';
 
 enum APIStatus {
   Online = 'Online',
@@ -74,26 +84,50 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Cribl's Diag Upload Service</h1>
-        <p>
-          API Status is: <span id="api-status" className="App-link">{apiStatus}</span>
-        </p>
-        <input type="file" onChange={handleFileChange} />
-        <button onClick={handleFileUpload}>Upload File</button>
-        {uploadMessage && <p>{uploadMessage}</p>}
-        <h2>Uploaded Files</h2>
-        <ul>
-          {files.map((file) => (
-            <li key={file.id}>
-              <a href={file.downloadUrl} target="_blank" rel="noopener noreferrer">{file.name}</a>
-              <button onClick={() => handleFileDelete(file.id)}>Delete</button>
-            </li>
-          ))}
-        </ul>
-      </header>
-    </div>
+    <Router>
+      <div className="App">
+        <header className="App-header">
+          <h1>Cribl's Diag Upload Service</h1>
+          <p>
+            API Status is: <span id="api-status" className="App-link">{apiStatus}</span>
+          </p>
+        </header>
+        <main style={{ maxWidth: 760, margin: '0 auto', minHeight: '80vh', padding: 20 }}>
+          <Link to='/'>{'< Home'}</Link>
+          <Uploader setFile={setFile} handleFileUpload={handleFileUpload} />
+          <div
+            onDrop={(e) => {
+              e.preventDefault();
+              const files = Array.from(e.dataTransfer.files);
+              setFile(files[0]);
+            }}
+            onDragOver={(e) => e.preventDefault()}
+            style={{
+              border: '2px dashed #ccc',
+              borderRadius: '4px',
+              padding: '20px',
+              textAlign: 'center',
+              marginBottom: '20px',
+            }}
+          >
+            Drag and drop files here, or click to select files
+            <input type="file" onChange={handleFileChange} style={{ display: 'none' }} />
+          </div>
+          <button onClick={handleFileUpload}>Upload File</button>
+          {uploadMessage && <p>{uploadMessage}</p>}
+          <h2>Uploaded Files</h2>
+          <ul>
+            {files.map((file) => (
+              <li key={file.id}>
+                <a href={file.downloadUrl} target="_blank" rel="noopener noreferrer">{file.name}</a>
+                <button onClick={() => handleFileDelete(file.id)}>Delete</button>
+              </li>
+            ))}
+          </ul>
+          <Outlet />
+        </main>
+      </div>
+    </Router>
   );
 };
 
