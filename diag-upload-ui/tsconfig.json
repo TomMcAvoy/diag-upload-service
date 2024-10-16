@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es5", // or "es6" if you prefer
+    "target": "es6", // or "esnext" if you prefer
     "lib": [
       "dom",
       "dom.iterable",
@@ -11,6 +11,12 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "module": "commonjs",
@@ -21,6 +27,11 @@
     "jsx": "react-jsx",
     "rootDir": "./src",
     "outDir": "./dist", // Specify output directory
-    "sourceMap": true // Enable source maps for debugging
-  }
+    "sourceMap": true, // Enable source maps for debugging
+    "incremental": true, // Enable incremental compilation
+    "declaration": true, // Generate declaration files
+    "declarationDir": "./types" // Output directory for declaration files
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }
