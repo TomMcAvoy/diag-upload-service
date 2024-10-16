@@ -1,10 +1,9 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es2020", // or another target that suits your project
     "lib": [
       "dom",
-      "dom.iterable",
-      "esnext" //
+      "es2020"
     ],
     "allowJs": true,
     "skipLibCheck": true,
@@ -13,14 +12,19 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "module": "esnext",
+    "module": "esnext", // or 'es2020', 'es2022', 'system', 'node16', 'nodenext'
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "outDir": "./dist",
+    "rootDir": "./src"
   },
   "include": [
     "src"
+  ],
+  "exclude": [
+    "node_modules"
   ]
 }

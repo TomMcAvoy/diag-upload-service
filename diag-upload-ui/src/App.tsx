@@ -35,7 +35,11 @@ const App: React.FC = () => {
         fetchFiles(); // Refresh the file list after upload
       } catch (error) {
         console.error('File upload error', error);
-        setUploadMessage('File upload failed: ' + error.message);
+        if (error instanceof Error) {
+          setUploadMessage('File upload failed: ' + error.message);
+        } else {
+          setUploadMessage('File upload failed: An unknown error occurred');
+        }
       }
     }
   };
@@ -47,7 +51,11 @@ const App: React.FC = () => {
       fetchFiles(); // Refresh the file list after deletion
     } catch (error) {
       console.error('File delete error', error);
-      setUploadMessage('File delete failed: ' + error.message);
+      if (error instanceof Error) {
+        setUploadMessage('File delete failed: ' + error.message);
+      } else {
+        setUploadMessage('File delete failed: An unknown error occurred');
+      }
     }
   };
 

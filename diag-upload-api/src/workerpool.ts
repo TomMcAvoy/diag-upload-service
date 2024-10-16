@@ -1,3 +1,5 @@
+import { Worker } from 'worker_threads';
+import path from 'path';
 
 export class WorkerPool {
   private workers: Worker[];
@@ -9,15 +11,17 @@ export class WorkerPool {
     this.queue = [];
     this.apiUrl = apiUrl;
 
+    const workerPath = path.resolve(__dirname, './fileWorker.js'); // Ensure the correct file extension
+
     for (let i = 0; i < workerCount; i++) {
-      const worker = new Worker(new URL('./fileWorker.ts', import.meta.url));
-      worker.onmessage = this.handleWorkerMessage.bind(this);
+      const worker = new Worker(workerPath);
+      worker.on('message', this.handleWorkerMessage.bind(this));
       this.workers.push(worker);
     }
   }
 
-  private handleWorkerMessage(event: MessageEvent) {
-    const { status, result, error } = event.data;
+  private handleWorkerMessage(message: any) {
+    const { status, result, error } = message;
     const callback = this.queue.shift();
     if (callback) {
       if (status === 'success') {
@@ -29,7 +33,7 @@ export class WorkerPool {
   }
 
   private getAvailableWorker(): Worker | null {
-    return this.workers.find(worker => worker.onmessage === null) || null;
+    return this.workers.find((worker) => worker.threadId === null) || null;
   }
 
   private enqueueTask(task: any) {
@@ -41,7 +45,7 @@ export class WorkerPool {
     const worker = this.getAvailableWorker();
     if (worker && this.queue.length > 0) {
       const task = this.queue.shift();
-      worker.onmessage = this.handleWorkerMessage.bind(this);
+      worker.on('message', this.handleWorkerMessage.bind(this));
       worker.postMessage(task);
     }
   }
@@ -53,7 +57,7 @@ export class WorkerPool {
         file,
         apiUrl: this.apiUrl,
         resolve,
-        reject,
+        reject
       });
     });
   }
@@ -65,7 +69,7 @@ export class WorkerPool {
         fileId,
         apiUrl: this.apiUrl,
         resolve,
-        reject,
+        reject
       });
     });
   }
