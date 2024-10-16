@@ -20,10 +20,10 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
 }
 
-const kafka = new Kafka({ clientId: 'my-app', brokers: ['kafka:9092'] });
+const kafka = new Kafka({ clientId: 'my-app', brokers: ['localhost:9092'] });
 const producer = kafka.producer();
 
-let db: Db;
+let db: Db; // Explicitly define the type of `db`
 
 // Create a Redis connection pool
 const redisClient = new Redis({
@@ -70,7 +70,6 @@ io.on('connection', (socket) => {
   console.log('Client connected');
 
   socket.on('start-upload', (data: { fileName: string; fileSize: number }) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { fileName, fileSize } = data;
     const fileId = uuidv4();
     const filePath = path.join(uploadDir, fileId);
@@ -89,18 +88,11 @@ io.on('connection', (socket) => {
       try {
         const fileStream = fs.createReadStream(filePath);
         fileStream.on('data', async (chunk) => {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const payloads = [{ topic: 'file-uploads', messages: chunk.toString('base64'), key: fileId }];
-          try {
-            await producer.send({
-              topic: 'file-uploads',
-              messages: [{ key: fileId, value: chunk.toString('base64') }],
-            });
-            console.log('File chunk sent to Kafka');
-          } catch (err) {
-            console.error('Error sending file to Kafka:', err);
-            socket.emit(`upload-error-${fileId}`, 'Error uploading file');
-          }
+          await producer.send({
+            topic: 'file-uploads',
+            messages: [{ key: fileId, value: chunk.toString('base64') }]
+          });
+          console.log('File chunk sent to Kafka');
         });
 
         fileStream.on('end', () => {
