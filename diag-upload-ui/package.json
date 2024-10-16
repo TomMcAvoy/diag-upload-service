@@ -65,5 +65,8 @@
       "last 2 chrome version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+   "@babel/plugin-proposal-private-property-in-object": "^7.14.5"
   }
 }
