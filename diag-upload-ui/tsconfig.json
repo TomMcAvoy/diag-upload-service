@@ -5,6 +5,8 @@
       "dom",
       "es2020"
     ],
+    "inlineSources": true,
+    "inlineSourceMap": true,
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
