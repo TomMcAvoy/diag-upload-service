@@ -92,7 +92,7 @@ app.post('/upload', async (req: Request, res: Response) => {
       return res.status(500).send(err);
     }
 
-    await db.collection('fileStatuses').insertOne({ fileId: file.name, status: 'Uploaded to Kafka' });
+    db.collection('fileStatuses').insertOne({ fileId: file.name, status: 'Uploaded to Kafka' });
 
     res.send('File uploaded!');
   });
