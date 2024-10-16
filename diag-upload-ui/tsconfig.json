@@ -22,11 +22,5 @@
     "rootDir": "./src",
     "outDir": "./dist", // Specify output directory
     "sourceMap": true // Enable source maps for debugging
-  },
-  "include": [
-    "src/**/*.ts"
-, "../diag-upload-api/fileWorker.test.ts"  ],
-  "exclude": [
-    "node_modules"
-  ]
+  }
 }
