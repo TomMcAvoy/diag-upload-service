@@ -41,3 +41,8 @@ export const uploadFile = async (file: File): Promise<{ message: string }> => {
 export const getFileMeta = async (fileId: string): Promise<FileType> => {
   return await fetcher(`/files/${fileId}`);
 };
+
+// Example usage of goatUrl (assuming it was used for some specific purpose)
+export const getGoatUrl = (): string => {
+  return goatUrl;
+};
