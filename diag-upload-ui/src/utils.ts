@@ -37,9 +37,37 @@ export const uploadFile = async (file: File): Promise<{ message: string }> => {
   throw new Error(await response.text());
 };
 
+// Update a specific file
+export const updateFile = async (fileId: string, file: File): Promise<{ message: string }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${basePath}/files/${fileId}`, {
+    method: 'PUT',
+    body: formData,
+  });
+
+  if (response.ok) {
+    return response.json();
+  }
+  throw new Error(await response.text());
+};
+
 // Get metadata of a specific file
 export const getFileMeta = async (fileId: string): Promise<FileType> => {
   return await fetcher(`/files/${fileId}`);
+};
+
+// Delete a specific file
+export const deleteFile = async (fileId: string): Promise<{ message: string }> => {
+  const response = await fetch(`${basePath}/files/${fileId}`, {
+    method: 'DELETE',
+  });
+
+  if (response.ok) {
+    return response.json();
+  }
+  throw new Error(await response.text());
 };
 
 // Example usage of goatUrl (assuming it was used for some specific purpose)

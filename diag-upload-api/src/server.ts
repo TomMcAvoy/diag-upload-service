@@ -1,12 +1,12 @@
-import express, { Request, Response } from 'express';
-import fileUpload, { UploadedFile } from 'express-fileupload';
-import { Kafka } from 'kafkajs';
-import { MongoClient, Db } from 'mongodb';
-import { Server } from 'socket.io';
+import express, {Request, Response} from 'express';
+import fileUpload, {UploadedFile} from 'express-fileupload';
+import {Kafka} from 'kafkajs';
+import {MongoClient, Db} from 'mongodb';
+import {Server} from 'socket.io';
 import http from 'http';
 import path from 'path';
 import fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
+import {v4 as uuidv4} from 'uuid';
 import Redis from 'ioredis'; // Using 'ioredis' package
 
 const app = express();
@@ -20,7 +20,7 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
 }
 
-const kafka = new Kafka({ clientId: 'my-app', brokers: ['localhost:9092'] });
+const kafka = new Kafka({clientId: 'my-app', brokers: ['localhost:9092']});
 const producer = kafka.producer();
 
 let db: Db; // Explicitly define the type of `db`
@@ -30,14 +30,14 @@ const redisClient = new Redis({
   host: 'localhost', // Redis server host
   port: 6379, // Redis server port
   maxRetriesPerRequest: null,
-  enableReadyCheck: false,
+  enableReadyCheck: false
 });
 
 const redisSubscriber = new Redis({
   host: 'localhost', // Redis server host
   port: 6379, // Redis server port
   maxRetriesPerRequest: null,
-  enableReadyCheck: false,
+  enableReadyCheck: false
 });
 
 // Example of subscribing to a channel
@@ -69,12 +69,12 @@ mongoClient.connect().then((client) => {
 io.on('connection', (socket) => {
   console.log('Client connected');
 
-  socket.on('start-upload', (data: { fileName: string; fileSize: number }) => {
-    const { fileName, fileSize } = data;
+  socket.on('start-upload', (data: {fileName: string; fileSize: number}) => {
+    const {fileName, fileSize} = data;
     const fileId = uuidv4();
     const filePath = path.join(uploadDir, fileId);
 
-    socket.emit('upload-id', { fileId });
+    socket.emit('upload-id', {fileId});
 
     socket.on(`upload-chunk-${fileId}`, (chunk: Buffer) => {
       fs.appendFileSync(filePath, chunk);
@@ -90,7 +90,7 @@ io.on('connection', (socket) => {
         fileStream.on('data', async (chunk) => {
           await producer.send({
             topic: 'file-uploads',
-            messages: [{ key: fileId, value: chunk.toString('base64') }]
+            messages: [{key: fileId, value: chunk.toString('base64')}]
           });
           console.log('File chunk sent to Kafka');
         });
@@ -125,23 +125,23 @@ app.post('/upload', async (req: Request, res: Response) => {
       return res.status(500).send(err);
     }
 
-    await db.collection('fileStatuses').insertOne({ fileId: file.name, status: 'Uploaded to Kafka' });
+    await db.collection('fileStatuses').insertOne({fileId: file.name, status: 'Uploaded to Kafka'});
 
     res.send('File uploaded!');
   });
 });
 
 app.post('/status-update', async (req: Request, res: Response) => {
-  const { status, fileId } = req.body;
+  const {status, fileId} = req.body;
 
   // Update status in database
-  await db.collection('fileStatuses').updateOne({ fileId }, { $set: { status } });
+  await db.collection('fileStatuses').updateOne({fileId}, {$set: {status}});
 
   // Publish status update to Redis
   const channel = `file-status-${fileId}`;
-  redisClient.publish(channel, JSON.stringify({ fileId, status }));
+  redisClient.publish(channel, JSON.stringify({fileId, status}));
 
-  res.json({ message: 'Status update received' });
+  res.json({message: 'Status update received'});
 });
 
 export default app;
