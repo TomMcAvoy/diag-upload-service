@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetcher, uploadFile, getAllFiles, getFileMeta, FileType } from './utils';
+import { fetcher, uploadFile, getAllFiles, getFileMeta, deleteFile, FileType } from './utils';
 import './App.css';
 
 enum APIStatus {
@@ -35,8 +35,19 @@ const App: React.FC = () => {
         fetchFiles(); // Refresh the file list after upload
       } catch (error) {
         console.error('File upload error', error);
-        setUploadMessage('File upload failed');
+        setUploadMessage('File upload failed: ' + error.message);
       }
+    }
+  };
+
+  const handleFileDelete = async (fileId: string) => {
+    try {
+      const response = await deleteFile(fileId);
+      setUploadMessage(response.message);
+      fetchFiles(); // Refresh the file list after deletion
+    } catch (error) {
+      console.error('File delete error', error);
+      setUploadMessage('File delete failed: ' + error.message);
     }
   };
 
@@ -69,6 +80,7 @@ const App: React.FC = () => {
           {files.map((file) => (
             <li key={file.id}>
               <a href={file.downloadUrl} target="_blank" rel="noopener noreferrer">{file.name}</a>
+              <button onClick={() => handleFileDelete(file.id)}>Delete</button>
             </li>
           ))}
         </ul>
