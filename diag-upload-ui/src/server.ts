@@ -1,98 +1,111 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import fileUpload, { UploadedFile } from 'express-fileupload';
-import path from 'path';
 import { Kafka } from 'kafkajs';
-import { MongoClient } from 'mongodb';
-import http from 'http';
+import { MongoClient, Db } from 'mongodb';
 import { Server } from 'socket.io';
-import Redis from 'ioredis';
+import http from 'http';
+import path from 'path';
+import fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
+import redis from 'redis'; // Assuming you are using the 'redis' package
 
 const app = express();
 const port = 8000;
 
-const diagDir = path.join(__dirname, '../diags');
-app.use(fileUpload());
-app.use(express.static(diagDir));
-
-// Initialize Kafka producer
-const kafka = new Kafka({
-  clientId: 'file-upload-service',
-  brokers: ['localhost:9092']
-});
-const producer = kafka.producer();
-
-const runProducer = async () => {
-  await producer.connect();
-};
-
-runProducer().catch(console.error);
-
-// Initialize MongoDB client
-const mongoClient = new MongoClient('mongodb://localhost:27017');
-let db;
-mongoClient.connect().then(client => {
-  db = client.db('fileUploadService');
-});
-
-// Initialize WebSocket server
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Initialize Redis
-const redis = new Redis();
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
+const kafka = new Kafka({ clientId: 'my-app', brokers: ['kafka:9092'] });
+const producer = kafka.producer();
+
+let db: Db;
+const redisClient = redis.createClient(); // Assuming you are using the 'redis' package
+
+const mongoClient = new MongoClient('mongodb://localhost:27017');
+mongoClient.connect().then((client) => {
+  db = client.db('fileUploadService');
+  console.log('Connected to MongoDB');
+  // Start the server only after the database connection is established
+  server.listen(port, () => {
+    console.log(`Server is listening on port ${port}`);
+  });
+});
 
 io.on('connection', (socket) => {
-  console.log('A user connected');
+  console.log('Client connected');
 
-  // Subscribe to Redis channels
-  socket.on('subscribe', (fileId) => {
-    const channel = `file-status-${fileId}`;
-    redis.subscribe(channel, (err, count) => {
-      if (err) {
-        console.error('Failed to subscribe: %s', err.message);
-      } else {
-        console.log(`Subscribed to ${channel}. Now subscribed to ${count} channel(s).`);
-      }
+  socket.on('start-upload', (data: { fileName: string; fileSize: number }) => {
+    const { fileName, fileSize } = data;
+    const fileId = uuidv4();
+    const filePath = path.join(uploadDir, fileId);
+
+    socket.emit('upload-id', { fileId });
+
+    socket.on(`upload-chunk-${fileId}`, (chunk: Buffer) => {
+      fs.appendFileSync(filePath, chunk);
+      socket.emit(`chunk-received-${fileId}`);
     });
 
-    redis.on('message', (channel, message) => {
-      socket.emit('statusUpdate', JSON.parse(message));
+    socket.on(`upload-complete-${fileId}`, async () => {
+      console.log(`File upload complete: ${filePath}`);
+
+      // Send file to Kafka
+      try {
+        const fileStream = fs.createReadStream(filePath);
+        fileStream.on('data', (chunk) => {
+          const payloads = [{ topic: 'file-uploads', messages: chunk.toString('base64'), key: fileId }];
+          producer.send(payloads, (err, data) => {
+            if (err) {
+              console.error('Error sending file to Kafka:', err);
+              socket.emit(`upload-error-${fileId}`, 'Error uploading file');
+            } else {
+              console.log('File chunk sent to Kafka:', data);
+            }
+          });
+        });
+
+        fileStream.on('end', () => {
+          socket.emit(`upload-success-${fileId}`);
+        });
+      } catch (error) {
+        console.error('Error sending file to Kafka:', error);
+        socket.emit(`upload-error-${fileId}`, 'Error uploading file');
+      }
     });
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected');
+    console.log('Client disconnected');
   });
 });
 
-app.post('/upload', async (req, res) => {
+app.use(fileUpload());
+
+app.post('/upload', async (req: Request, res: Response) => {
   if (!req.files || Object.keys(req.files).length === 0) {
     return res.status(400).send('No files were uploaded.');
   }
 
   const file = req.files.file as UploadedFile;
+  const filePath = path.join(uploadDir, file.name);
 
-  try {
-    // Send file data to Kafka
-    await producer.send({
-      topic: 'file-uploads',
-      messages: [
-        { key: file.name, value: file.data.toString('base64') }
-      ],
-    });
+  file.mv(filePath, async (err) => {
+    if (err) {
+      return res.status(500).send(err);
+    }
 
-    // Store initial status in database
     await db.collection('fileStatuses').insertOne({ fileId: file.name, status: 'Uploaded to Kafka' });
 
-    // Respond with success notification
-    res.json({ message: 'File uploaded successfully and sent to Kafka' });
-  } catch (error) {
-    console.error('Error sending file to Kafka:', error);
-    res.status(500).send('Error uploading file');
-  }
+    res.send('File uploaded!');
+  });
 });
 
-app.post('/status-update', async (req, res) => {
+app.post('/status-update', async (req: Request, res: Response) => {
   const { status, fileId } = req.body;
 
   // Update status in database
@@ -100,11 +113,8 @@ app.post('/status-update', async (req, res) => {
 
   // Publish status update to Redis
   const channel = `file-status-${fileId}`;
-  redis.publish(channel, JSON.stringify({ fileId, status }));
+  redisClient.publish(channel, JSON.stringify({ fileId, status }));
 
   res.json({ message: 'Status update received' });
 });
-
-server.listen(port, () => {
-  console.log(`App is listening on port ${port}!`);
-});
+export default app;
