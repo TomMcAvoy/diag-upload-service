@@ -7,7 +7,7 @@ import http from 'http';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-import redis from 'redis'; // Assuming you are using the 'redis' package
+import Redis from 'ioredis'; // Using 'ioredis' package
 
 const app = express();
 const port = 8000;
@@ -24,7 +24,37 @@ const kafka = new Kafka({ clientId: 'my-app', brokers: ['kafka:9092'] });
 const producer = kafka.producer();
 
 let db: Db;
-const redisClient = redis.createClient(); // Assuming you are using the 'redis' package
+
+// Create a Redis connection pool
+const redisClient = new Redis({
+  host: 'localhost', // Redis server host
+  port: 6379, // Redis server port
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+});
+
+const redisSubscriber = new Redis({
+  host: 'localhost', // Redis server host
+  port: 6379, // Redis server port
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+});
+
+// Example of subscribing to a channel
+redisSubscriber.subscribe('example-channel', (err, count) => {
+  if (err) {
+    console.error('Failed to subscribe: %s', err.message);
+  } else {
+    console.log(`Subscribed successfully! This client is currently subscribed to ${count} channels.`);
+  }
+});
+
+redisSubscriber.on('message', (channel, message) => {
+  console.log(`Received message from ${channel}: ${message}`);
+});
+
+// Example of publishing to a channel
+redisClient.publish('example-channel', 'Hello, Redis!');
 
 const mongoClient = new MongoClient('mongodb://localhost:27017');
 mongoClient.connect().then((client) => {
@@ -121,4 +151,5 @@ app.post('/status-update', async (req: Request, res: Response) => {
 
   res.json({ message: 'Status update received' });
 });
+
 export default app;
