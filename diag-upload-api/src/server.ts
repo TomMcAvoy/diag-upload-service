@@ -40,6 +40,7 @@ io.on('connection', (socket) => {
   console.log('Client connected');
 
   socket.on('start-upload', (data: { fileName: string; fileSize: number }) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { fileName, fileSize } = data;
     const fileId = uuidv4();
     const filePath = path.join(uploadDir, fileId);
@@ -58,15 +59,18 @@ io.on('connection', (socket) => {
       try {
         const fileStream = fs.createReadStream(filePath);
         fileStream.on('data', (chunk) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const payloads = [{ topic: 'file-uploads', messages: chunk.toString('base64'), key: fileId }];
-          producer.send(payloads, (err, data) => {
-            if (err) {
-              console.error('Error sending file to Kafka:', err);
-              socket.emit(`upload-error-${fileId}`, 'Error uploading file');
-            } else {
-              console.log('File chunk sent to Kafka:', data);
-            }
-          });
+          try {
+            await producer.send({
+              topic: 'file-uploads',
+              messages: [{ key: fileId, value: chunk.toString('base64') }],
+            });
+            console.log('File chunk sent to Kafka');
+          } catch (err) {
+            console.error('Error sending file to Kafka:', err);
+            socket.emit(`upload-error-${fileId}`, 'Error uploading file');
+          }
         });
 
         fileStream.on('end', () => {
