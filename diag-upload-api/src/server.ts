@@ -8,9 +8,15 @@ import path from 'path';
 import fs from 'fs';
 import {v4 as uuidv4} from 'uuid';
 import Redis from 'ioredis'; // Using 'ioredis' package
+import cors from 'cors'; // Import cors package
 
 const app = express();
 const port = 8000;
+
+// Configure CORS
+app.use(cors({
+  origin: 'http://localhost:3000'
+}));
 
 const server = http.createServer(app);
 const io = new Server(server);
@@ -142,6 +148,17 @@ app.post('/status-update', async (req: Request, res: Response) => {
   redisClient.publish(channel, JSON.stringify({fileId, status}));
 
   res.json({message: 'Status update received'});
+});
+
+// Define the /files endpoint
+app.get('/files', (req: Request, res: Response) => {
+  const files = fs.readdirSync(uploadDir);
+  res.json(files);
+});
+
+// Define the root endpoint
+app.get('/', (req: Request, res: Response) => {
+  res.json({ message: 'Server is running' });
 });
 
 export default app;
