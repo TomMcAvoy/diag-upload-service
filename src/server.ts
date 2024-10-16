@@ -7,6 +7,7 @@ import http from 'http';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
+import redis from 'redis'; // Assuming you are using the 'redis' package
 
 const app = express();
 const port = 8000;
@@ -22,11 +23,17 @@ if (!fs.existsSync(uploadDir)) {
 const kafka = new Kafka({ clientId: 'my-app', brokers: ['kafka:9092'] });
 const producer = kafka.producer();
 
-let db: Db;
+let db: Db; // Explicitly define the type of `db`
+const redisClient = redis.createClient(); // Assuming you are using the 'redis' package
 
 const mongoClient = new MongoClient('mongodb://localhost:27017');
 mongoClient.connect().then((client) => {
   db = client.db('fileUploadService');
+  console.log('Connected to MongoDB');
+  // Start the server only after the database connection is established
+  server.listen(port, () => {
+    console.log(`Server is listening on port ${port}`);
+  });
 });
 
 io.on('connection', (socket) => {
@@ -50,16 +57,13 @@ io.on('connection', (socket) => {
       // Send file to Kafka
       try {
         const fileStream = fs.createReadStream(filePath);
-        fileStream.on('data', (chunk) => {
+        fileStream.on('data', async (chunk) => {
           const payloads = [{ topic: 'file-uploads', messages: chunk.toString('base64'), key: fileId }];
-          producer.send(payloads, (err, data) => {
-            if (err) {
-              console.error('Error sending file to Kafka:', err);
-              socket.emit(`upload-error-${fileId}`, 'Error uploading file');
-            } else {
-              console.log('File chunk sent to Kafka:', data);
-            }
+          await producer.send({
+            topic: 'file-uploads',
+            messages: [{ key: fileId, value: chunk.toString('base64') }]
           });
+          console.log('File chunk sent to Kafka');
         });
 
         fileStream.on('end', () => {
@@ -92,7 +96,7 @@ app.post('/upload', async (req: Request, res: Response) => {
       return res.status(500).send(err);
     }
 
-    db.collection('fileStatuses').insertOne({ fileId: file.name, status: 'Uploaded to Kafka' });
+    await db.collection('fileStatuses').insertOne({ fileId: file.name, status: 'Uploaded to Kafka' });
 
     res.send('File uploaded!');
   });
@@ -103,9 +107,11 @@ app.post('/status-update', async (req: Request, res: Response) => {
 
   await db.collection('fileStatuses').updateOne({ fileId }, { $set: { status } });
 
+  // Publish status update to Redis
+  const channel = `file-status-${fileId}`;
+  redisClient.publish(channel, JSON.stringify({ fileId, status }));
+
   res.json({ message: 'Status update received' });
 });
 
-server.listen(port, () => {
-  console.log(`Server is listening on port ${port}`);
-});
+export default app;
