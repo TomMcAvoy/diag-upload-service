@@ -58,7 +58,7 @@ io.on('connection', (socket) => {
       // Send file to Kafka
       try {
         const fileStream = fs.createReadStream(filePath);
-        fileStream.on('data', (chunk) => {
+        fileStream.on('data', async (chunk) => {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const payloads = [{ topic: 'file-uploads', messages: chunk.toString('base64'), key: fileId }];
           try {
