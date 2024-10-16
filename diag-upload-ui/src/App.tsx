@@ -7,9 +7,7 @@ import {
   Link
 } from "react-router-dom";
 import './App.css';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import FileInfo from './components/FileInfo';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Files from './components/Files';
 import Uploader from './components/Uploader';
 import { fetcher, uploadFile, getAllFiles, deleteFile, FileType } from './utils';
@@ -96,12 +94,13 @@ const App: React.FC = () => {
         </header>
         <main style={{ maxWidth: 760, margin: '0 auto', minHeight: '80vh', padding: 20 }}>
           <Link to='/'>{'< Home'}</Link>
-          <Uploader setFile={setFile} handleFileUpload={handleFileUpload} />
           <div
             onDrop={(e) => {
               e.preventDefault();
               const files = Array.from(e.dataTransfer.files);
-              setFile(files[0]);
+              if (files.length > 0) {
+                setFile(files[0]);
+              }
             }}
             onDragOver={(e) => e.preventDefault()}
             style={{
