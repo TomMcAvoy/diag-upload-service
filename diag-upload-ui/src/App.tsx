@@ -25,8 +25,13 @@ const App: React.FC = () => {
 
   const getApiStatus = async () => {
     try {
-      await fetcher('/');
-      setApiStatus(APIStatus.Online);
+      const response = await fetch('http://localhost:8000/status');
+      const data = await response.json();
+      if (data.status === 'Server is running') {
+        setApiStatus(APIStatus.Online);
+      } else {
+        setApiStatus(APIStatus.Offline);
+      }
     } catch (error) {
       console.error('Api status error', error);
       setApiStatus(APIStatus.Offline);
@@ -51,6 +56,8 @@ const App: React.FC = () => {
           setUploadMessage('File upload failed: An unknown error occurred');
         }
       }
+    } else {
+      setUploadMessage('No file selected for upload.');
     }
   };
 
@@ -119,7 +126,7 @@ const App: React.FC = () => {
           <h2>Uploaded Files</h2>
           <ul>
             {files.map((file) => (
-              <li key={file.id}>
+              <li key={file.id}> {/* Ensure each child has a unique key */}
                 <a href={file.downloadUrl} target="_blank" rel="noopener noreferrer">{file.name}</a>
                 <button onClick={() => handleFileDelete(file.id)}>Delete</button>
               </li>

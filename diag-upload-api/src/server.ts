@@ -13,6 +13,10 @@ import cors from 'cors'; // Import cors package
 const app = express();
 const port = 8000;
 
+const diagDir = path.join(__dirname, '../diags');
+app.use(fileUpload());
+app.use(express.static(diagDir))
+
 // Configure CORS
 app.use(cors({
   origin: 'http://localhost:3000'
@@ -156,9 +160,14 @@ app.get('/files', (req: Request, res: Response) => {
   res.json(files);
 });
 
-// Define the root endpoint
-app.get('/', (req: Request, res: Response) => {
-  res.json({ message: 'Server is running' });
+app.get('/', (_req, res) => {
+  res.json({message: 'Diag Service', status: 'Online'});
 });
+
+// Define the root endpoint
+ app.get('/status', (_req, res) => {
+    res.json({message: 'Diag Service', status: 'Online'})
+});
+
 
 export default app;
