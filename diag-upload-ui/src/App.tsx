@@ -1,41 +1,17 @@
-import * as React from 'react';
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Outlet,
-  Link
-} from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { fetcher, uploadFile, getAllFiles, getFileMeta, FileType } from './utils';
 import './App.css';
-import FileInfo from './components/FileInfo';
-import Files from './components/Files';
-import Uploader from './components/Uploader';
-import { fetcher } from './utils';
-
 
 enum APIStatus {
   Online = 'Online',
-  Offline = 'Offline'
+  Offline = 'Offline',
 }
 
-function App() {
-  const [appState, setAppState] = React.useState('loaded');
-  return (
-    <Router>
-      <Routes>
-        <Route path='/' element={<Layout setAppState={setAppState}/>}>
-          <Route index element={<Files appState={appState}/>} />
-          <Route path=':id' element={<FileInfo appState={appState}/>} />
-        </Route>
-      </Routes>
-    </Router>
-  );
-}
-
-export default App;
-
-const Layout = ({setAppState}: {setAppState: (s: string) => void}) => {
-  const [apiStatus, setApiStatus] = React.useState<APIStatus>(APIStatus.Offline)
+const App: React.FC = () => {
+  const [apiStatus, setApiStatus] = useState<APIStatus>(APIStatus.Offline);
+  const [file, setFile] = useState<File | null>(null);
+  const [uploadMessage, setUploadMessage] = useState<string>('');
+  const [files, setFiles] = useState<FileType[]>([]);
 
   const getApiStatus = async () => {
     try {
@@ -47,31 +23,58 @@ const Layout = ({setAppState}: {setAppState: (s: string) => void}) => {
     }
   };
 
-  React.useEffect(() => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFile(event.target.files ? event.target.files[0] : null);
+  };
+
+  const handleFileUpload = async () => {
+    if (file) {
+      try {
+        const response = await uploadFile(file);
+        setUploadMessage(response.message);
+        fetchFiles(); // Refresh the file list after upload
+      } catch (error) {
+        console.error('File upload error', error);
+        setUploadMessage('File upload failed');
+      }
+    }
+  };
+
+  const fetchFiles = async () => {
+    try {
+      const files = await getAllFiles();
+      setFiles(files);
+    } catch (error) {
+      console.error('Error fetching files', error);
+    }
+  };
+
+  useEffect(() => {
     getApiStatus();
+    fetchFiles();
   }, []);
+
   return (
     <div className="App">
       <header className="App-header">
-        <h1>
-          Cribl's Diag Upload Service
-        </h1>
-        <p>API Status is: <a
-            id="api-status"
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {apiStatus}
-          </a>
+        <h1>Cribl's Diag Upload Service</h1>
+        <p>
+          API Status is: <span id="api-status" className="App-link">{apiStatus}</span>
         </p>
+        <input type="file" onChange={handleFileChange} />
+        <button onClick={handleFileUpload}>Upload File</button>
+        {uploadMessage && <p>{uploadMessage}</p>}
+        <h2>Uploaded Files</h2>
+        <ul>
+          {files.map((file) => (
+            <li key={file.id}>
+              <a href={file.downloadUrl} target="_blank" rel="noopener noreferrer">{file.name}</a>
+            </li>
+          ))}
+        </ul>
       </header>
-      <main style={{ maxWidth: 760, margin: '0 auto', minHeight: '80vh', padding: 20}}>
-        <Link to='/'>{'< Home'}</Link>
-        <Uploader setAppState={setAppState}/>
-        <Outlet />
-      </main>
     </div>
-  )
-}
+  );
+};
+
+export default App;
