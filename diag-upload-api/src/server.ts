@@ -187,17 +187,9 @@ app.delete('/files/:fileId', async (req, res) => {
 
     const filePath = path.join(UPLOADS_DIR, fileMetadata.fileName);
     try {
-      // Check if the file exists before attempting to delete it
-      try {
-        await fs.access(filePath);
-      } catch (err) {
-        console.warn(`File not found, skipping deletion: ${filePath}`);
-        return res.status(404).json({ message: 'File not found on filesystem' });
-      }
-
       await fs.unlink(filePath);
     } catch (err) {
-      return res.status(500).json({ message: 'Error deleting file from filesystem', error: (err as Error).message });
+      return res.status(404).json({ message: 'File not found on filesystem' });
     }
 
     await db.collection('fileStatuses').deleteOne({ fileId });
@@ -205,7 +197,7 @@ app.delete('/files/:fileId', async (req, res) => {
     res.status(200).json({ message: 'File deleted successfully' });
   } catch (error) {
     console.error('Error deleting file:', error);
-    res.status(500).json({ message: 'Error deleting file', error: (error as Error).message });
+    res.status(500).json({ message: 'Error deleting file' });
   }
 });
 
@@ -213,27 +205,12 @@ app.delete('/files/:fileId', async (req, res) => {
 app.delete('/files/all', async (req, res) => {
   try {
     // Read all files in the uploads directory
-    let files;
-    try {
-      files = await fs.readdir(UPLOADS_DIR);
-    } catch (err) {
-      console.error('Error reading directory:', err);
-      return res.status(500).json({ message: 'Error reading directory', error: (err as Error).message });
-    }
-
+    const files = await fs.readdir(UPLOADS_DIR);
+    
     // Delete each file
     for (const file of files) {
-      const filePath = path.join(UPLOADS_DIR, file);
       try {
-        // Check if the file exists before attempting to delete it
-        try {
-          await fs.access(filePath);
-        } catch (err) {
-          console.warn(`File not found, skipping deletion: ${filePath}`);
-          continue;
-        }
-
-        await fs.unlink(filePath);
+        await fs.unlink(path.join(UPLOADS_DIR, file));
       } catch (err) {
         console.error('Error deleting file:', err);
         return res.status(500).json({ message: 'Error deleting file from filesystem', error: (err as Error).message });
@@ -241,12 +218,7 @@ app.delete('/files/all', async (req, res) => {
     }
 
     // Delete all file metadata from the database
-    try {
-      await db.collection('fileStatuses').deleteMany({});
-    } catch (err) {
-      console.error('Error deleting file metadata from database:', err);
-      return res.status(500).json({ message: 'Error deleting file metadata from database', error: (err as Error).message });
-    }
+    await db.collection('fileStatuses').deleteMany({});
 
     res.json({ message: 'All files deleted successfully' });
   } catch (error) {
