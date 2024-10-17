@@ -1,3 +1,12 @@
+/**
+ * @file server.ts
+ * @description This file sets up an Express server with endpoints for file uploads, metadata retrieval, and file deletion. 
+ * It also integrates MongoDB for storing file metadata and Redis for caching. Additionally, it sets up a Socket.IO server 
+ * for real-time communication.
+ * 
+ * @module server
+ */
+
 import express, { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
@@ -13,7 +22,9 @@ import Redis from 'ioredis'; // Using 'ioredis' package
 const app = express();
 const PORT = 8000;
 
-// Enable CORS for all routes
+/**
+ * Enable CORS for all routes
+ */
 app.use(cors({
   origin: 'http://localhost:3000'
 }));
@@ -82,7 +93,12 @@ const synchronizeDatabaseWithUploads = async () => {
   }
 };
 
-// Endpoint to handle file uploads
+/**
+ * Endpoint to handle file uploads
+ * @route POST /upload
+ * @param {Request} req - Express request object
+ * @param {Response} res - Express response object
+ */
 app.post('/upload', upload.single('file'), async (req, res) => {
   const file = req.file;
   if (!file) {
@@ -109,13 +125,27 @@ app.post('/upload', upload.single('file'), async (req, res) => {
   res.json({ message: 'File uploaded successfully', fileId, fileName, checksum, creationDate });
 });
 
-// Endpoint to get metadata for all uploaded files
+/**
+ * Endpoint to get metadata for all uploaded files
+ * @route GET /files/metadata
+ * @param {Request} req - Express request object
+ * @param {Response} res - Express response object
+ */
 app.get('/files/metadata', async (req, res) => {
   const files = await db.collection('fileStatuses').find({}, { projection: { _id: 0, fileId: 1, fileName: 1, checksum: 1, creationDate: 1 } }).toArray();
+  
+  // Log the response before returning it
+  console.log('Metadata response:', files);
+  
   res.json(files);
 });
 
-// Endpoint to delete a specific file
+/**
+ * Endpoint to delete a specific file
+ * @route DELETE /files/:fileName
+ * @param {Request} req - Express request object
+ * @param {Response} res - Express response object
+ */
 app.delete('/files/:fileName', async (req, res) => {
   const { fileName } = req.params;
 
@@ -144,7 +174,12 @@ app.delete('/files/:fileName', async (req, res) => {
   res.json({ message: 'File deleted successfully', files: updatedFiles });
 });
 
-// Endpoint to delete all files
+/**
+ * Endpoint to delete all files
+ * @route DELETE /files/all
+ * @param {Request} req - Express request object
+ * @param {Response} res - Express response object
+ */
 app.delete('/files/all', async (req, res) => {
   // Delete all files from the filesystem
   const uploadPath = path.join(__dirname, 'uploads');
@@ -164,7 +199,12 @@ app.delete('/files/all', async (req, res) => {
   res.json({ message: 'All files deleted successfully' });
 });
 
-// Status endpoint to return API status
+/**
+ * Status endpoint to return API status
+ * @route GET /status
+ * @param {Request} req - Express request object
+ * @param {Response} res - Express response object
+ */
 app.get('/status', (req, res) => {
   res.json({ status: 'Server is running' });
 });
@@ -173,7 +213,10 @@ app.get('/status', (req, res) => {
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Handle socket.io connections
+/**
+ * Handle socket.io connections
+ * @param {Socket} socket - Socket.IO socket object
+ */
 io.on('connection', (socket) => {
   console.log('A user connected');
   socket.on('disconnect', () => {
@@ -181,7 +224,9 @@ io.on('connection', (socket) => {
   });
 });
 
-// Start the server
+/**
+ * Start the server
+ */
 server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
