@@ -12,6 +12,7 @@ import Redis from 'ioredis'; // Using 'ioredis' package
 
 const app = express();
 const PORT = 8000;
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
 /**
  * Enable CORS for all routes
@@ -23,11 +24,10 @@ app.use(cors({
 // Set up storage for uploaded files
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, 'uploads');
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
+    if (!fs.existsSync(UPLOADS_DIR)) {
+      fs.mkdirSync(UPLOADS_DIR, { recursive: true });
     }
-    cb(null, uploadPath);
+    cb(null, UPLOADS_DIR);
   },
   filename: (req, file, cb) => {
     cb(null, file.originalname);
@@ -57,12 +57,11 @@ const redisClient = new Redis({
 
 // Function to synchronize the database with the uploads directory
 const synchronizeDatabaseWithUploads = async () => {
-  const uploadPath = path.join(__dirname, 'uploads');
-  const filesInDirectory = fs.readdirSync(uploadPath);
+  const filesInDirectory = fs.readdirSync(UPLOADS_DIR);
 
   // Ensure all files in the directory have corresponding metadata in the database
   for (const fileName of filesInDirectory) {
-    const filePath = path.join(uploadPath, fileName);
+    const filePath = path.join(UPLOADS_DIR, fileName);
     const fileStats = fs.statSync(filePath);
     const creationDate = new Date(fileStats.birthtime).toISOString(); // Convert to ISO string
 
@@ -131,61 +130,57 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
 // Endpoint to get metadata for all uploaded files
 app.get('/files/metadata', async (req, res) => {
-  const files = await db.collection('fileStatuses').find({}, { projection: { _id: 0, fileId: 1, fileName: 1, checksum: 1, creationDate: 1 } }).toArray();
-  
-  // Log the response before returning it
-  console.log('Metadata response:', files);
-  
-  res.json(files);
+  try {
+    const files = await db.collection('fileStatuses').find({}, { projection: { _id: 0, fileId: 1, fileName: 1, checksum: 1, creationDate: 1 } }).toArray();
+    res.json(files);
+  } catch (error) {
+    res.status(500).send('Error fetching files metadata');
+  }
 });
 
 // Endpoint to delete a specific file
-app.delete('/files/:fileName', async (req, res) => {
-  const { fileName } = req.params;
+app.delete('/files/:fileId', async (req, res) => {
+  const { fileId } = req.params;
+  try {
+    const fileMetadata = await db.collection('fileStatuses').findOne({ fileId });
 
-  // Decode the file name
-  const decodedFileName = decodeURIComponent(fileName);
+    if (!fileMetadata) {
+      return res.status(404).send('File not found');
+    }
 
-  // Find the file metadata in the database
-  const fileMetadata = await db.collection('fileStatuses').findOne({ fileName: decodedFileName });
+    const filePath = path.join(UPLOADS_DIR, fileMetadata.fileName);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    } else {
+      return res.status(404).send('File not found on filesystem');
+    }
 
-  if (!fileMetadata) {
-    return res.status(404).json({ message: 'File not found' });
+    await db.collection('fileStatuses').deleteOne({ fileId });
+
+    res.status(200).send('File deleted successfully');
+  } catch (error) {
+    console.error('Error deleting file:', error);
+    res.status(500).send('Error deleting file');
   }
-
-  // Delete the file from the filesystem
-  const filePath = path.join(__dirname, 'uploads', decodedFileName);
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-  }
-
-  // Delete the file metadata from the database
-  await db.collection('fileStatuses').deleteOne({ fileName: decodedFileName });
-
-  // Retrieve the updated metadata list
-  const updatedFiles = await db.collection('fileStatuses').find({}, { projection: { _id: 0, fileId: 1, fileName: 1, checksum: 1, creationDate: 1 } }).toArray();
-
-  res.json({ message: 'File deleted successfully', files: updatedFiles });
 });
 
 // Endpoint to delete all files
 app.delete('/files/all', async (req, res) => {
-  // Delete all files from the filesystem
-  const uploadPath = path.join(__dirname, 'uploads');
-  fs.readdir(uploadPath, (err, files) => {
-    if (err) throw err;
-
+  try {
+    // Delete all files from the filesystem
+    const files = fs.readdirSync(UPLOADS_DIR);
     for (const file of files) {
-      fs.unlink(path.join(uploadPath, file), err => {
-        if (err) throw err;
-      });
+      fs.unlinkSync(path.join(UPLOADS_DIR, file));
     }
-  });
 
-  // Delete all file metadata from the database
-  await db.collection('fileStatuses').deleteMany({});
+    // Delete all file metadata from the database
+    await db.collection('fileStatuses').deleteMany({});
 
-  res.json({ message: 'All files deleted successfully' });
+    res.json({ message: 'All files deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting all files:', error);
+    res.status(500).send('Error deleting all files');
+  }
 });
 
 // Status endpoint to return API status

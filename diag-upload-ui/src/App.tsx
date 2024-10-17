@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getAllFiles, uploadFile, deleteFile, FileType } from './utils'; // Import the functions and FileType
 
-  const App: React.FC = () => {
+const App: React.FC = () => {
   const [items, setItems] = useState<FileType[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [uploadMessage, setUploadMessage] = useState<string>('');
@@ -140,10 +140,10 @@ import { getAllFiles, uploadFile, deleteFile, FileType } from './utils'; // Impo
         <tbody>
           {items.map((item, index) => (
             <tr
-              key={item.id}
-              onClick={() => handleRowClick(item.id)}
+              key={item.fileId} // Ensure this key is unique
+              onClick={() => handleRowClick(item.fileId)}
               style={{
-                backgroundColor: selectedItems.has(item.id)
+                backgroundColor: selectedItems.has(item.fileId)
                   ? '#d3d3d3'
                   : index % 2 === 0
                   ? '#f9f9f9'
@@ -154,15 +154,15 @@ import { getAllFiles, uploadFile, deleteFile, FileType } from './utils'; // Impo
               <td style={{ border: '1px solid #ddd', padding: '8px' }}>
                 <input
                   type="checkbox"
-                  checked={selectedItems.has(item.id)}
-                  onChange={() => handleCheckboxChange(item.id)}
+                  checked={selectedItems.has(item.fileId)}
+                  onChange={() => handleCheckboxChange(item.fileId)}
                 />
               </td>
               <td style={{ border: '1px solid #ddd', padding: '8px' }}>{item.fileName}</td>
               <td style={{ border: '1px solid #ddd', paddingRight: '8px' }}>{item.checksum}</td>
               <td style={{ border: '1px solid #ddd', padding: '8px' }}>{new Date(item.creationDate).toLocaleString()}</td>
               <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>
-                <button onClick={() => handleDelete(item.id)}>Delete</button>
+                <button onClick={() => handleDelete(item.fileId)}>Delete</button>
               </td>
             </tr>
           ))}

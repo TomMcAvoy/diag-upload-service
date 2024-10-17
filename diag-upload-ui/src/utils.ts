@@ -1,5 +1,5 @@
 export type FileType = {
-  id: string;
+  fileId: string;
   fileName: string;
   checksum: string;
   creationDate: string;
