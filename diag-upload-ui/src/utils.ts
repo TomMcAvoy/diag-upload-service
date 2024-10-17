@@ -4,6 +4,7 @@ export type FileType = {
   id: string;
   name: string;
   downloadUrl: string;
+  creationDate: string; // Add creationDate to the FileType
 };
 
 const basePath = 'http://localhost:8000';
@@ -18,7 +19,12 @@ export const fetcher = async (path: string, opts?: RequestInit) => {
 
 // Fetch all files from the backend
 export const getAllFiles = async (): Promise<FileType[]> => {
-  return await fetcher('/files');
+  const files = await fetcher('/files');
+  console.log('Fetched files:', files); // Debug: Output fetched files
+  files.forEach((file: FileType) => {
+    console.log('Fetched creationDate:', file.creationDate); // Debug: Output each creationDate
+  });
+  return files;
 };
 
 // Upload a file to the backend

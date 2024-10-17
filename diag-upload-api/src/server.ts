@@ -34,9 +34,6 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Serve uploaded files
-app.use('/files', express.static(path.join(__dirname, 'uploads')));
-
 // MongoDB setup
 let db: Db;
 const mongoClient = new MongoClient('mongodb://localhost:27017');
@@ -67,7 +64,7 @@ const synchronizeDatabaseWithUploads = async () => {
     const fileBuffer = fs.readFileSync(filePath);
     const checksum = crypto.createHash('md5').update(fileBuffer).digest('hex');
     const fileStats = fs.statSync(filePath);
-    const creationDate = fileStats.birthtime.toISOString(); // Convert to ISO string
+    const creationDate = new Date(fileStats.birthtime).toISOString(); // Convert to ISO string
 
     const existingFile = await db.collection('fileStatuses').findOne({ fileName, checksum });
     if (!existingFile) {
@@ -97,7 +94,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
   const fileBuffer = fs.readFileSync(file.path);
   const checksum = crypto.createHash('md5').update(fileBuffer).digest('hex');
   const fileStats = fs.statSync(file.path);
-  const creationDate = fileStats.birthtime.toISOString(); // Convert to ISO string
+  const creationDate = new Date(fileStats.birthtime).toISOString(); // Convert to ISO string
 
   // Check if the file with the same name and checksum already exists
   const existingFile = await db.collection('fileStatuses').findOne({ fileName, checksum });
@@ -113,7 +110,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 });
 
 // Endpoint to get metadata for all uploaded files
-app.get('/files', async (req, res) => {
+app.get('/files/metadata', async (req, res) => {
   const files = await db.collection('fileStatuses').find({}, { projection: { _id: 0, fileId: 1, fileName: 1, checksum: 1, creationDate: 1 } }).toArray();
   res.json(files);
 });
