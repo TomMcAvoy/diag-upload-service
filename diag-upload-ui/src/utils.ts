@@ -1,4 +1,4 @@
-import { message, Button, Descriptions, DescriptionsItem } from 'antd';
+import { message, Button, Descriptions } from 'antd';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
@@ -105,7 +105,7 @@ const File = ({ appState }: { appState: string }) => {
 
   if (!file) return null;
   return (
-    <Descriptions title="File Data" column={1} bordered>
+    <Descriptions title="File Data" column={1} bordered={true}>
       <Descriptions.Item label="ID">{file.id}</Descriptions.Item>
       <Descriptions.Item label="File Name">{file.fileName}</Descriptions.Item>
       <Descriptions.Item label="Checksum">{file.checksum}</Descriptions.Item>
