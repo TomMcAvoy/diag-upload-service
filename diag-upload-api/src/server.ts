@@ -1,18 +1,24 @@
 import express, { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
+import fs from 'fs/promises';
+import { createReadStream } from 'fs';
 import cors from 'cors';
 import http from 'http';
 import { Server } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import { MongoClient, Db } from 'mongodb';
-import Redis from 'ioredis'; // Using 'ioredis' package
+import Redis from 'ioredis';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 const app = express();
-const PORT = 8000;
+const PORT = process.env.PORT || 8000;
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017';
+const REDIS_HOST = process.env.REDIS_HOST || 'localhost';
+const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379', 10);
 
 /**
  * Enable CORS for all routes
@@ -21,13 +27,25 @@ app.use(cors({
   origin: 'http://localhost:3000'
 }));
 
+// Security middleware
+app.use(helmet());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+app.use(limiter);
+
 // Set up storage for uploaded files
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    if (!fs.existsSync(UPLOADS_DIR)) {
-      fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  destination: async (req, file, cb) => {
+    try {
+      await fs.mkdir(UPLOADS_DIR, { recursive: true });
+      cb(null, UPLOADS_DIR);
+    } catch (err) {
+      cb(err);
     }
-    cb(null, UPLOADS_DIR);
   },
   filename: (req, file, cb) => {
     cb(null, file.originalname);
@@ -38,60 +56,66 @@ const upload = multer({ storage });
 
 // MongoDB setup
 let db: Db;
-const mongoClient = new MongoClient('mongodb://localhost:27017');
+const mongoClient = new MongoClient(MONGO_URI);
 mongoClient.connect().then((client) => {
   db = client.db('fileUploadService');
   console.log('Connected to MongoDB');
 
   // Synchronize the database with the uploads directory on startup
   synchronizeDatabaseWithUploads();
+}).catch(err => {
+  console.error('Failed to connect to MongoDB:', err);
 });
 
 // Redis setup
 const redisClient = new Redis({
-  host: 'localhost',
-  port: 6379,
+  host: REDIS_HOST,
+  port: REDIS_PORT,
   maxRetriesPerRequest: null,
   enableReadyCheck: false
 });
 
 // Function to synchronize the database with the uploads directory
 const synchronizeDatabaseWithUploads = async () => {
-  const filesInDirectory = fs.readdirSync(UPLOADS_DIR);
+  try {
+    const filesInDirectory = await fs.readdir(UPLOADS_DIR);
 
-  // Ensure all files in the directory have corresponding metadata in the database
-  for (const fileName of filesInDirectory) {
-    const filePath = path.join(UPLOADS_DIR, fileName);
-    const fileStats = fs.statSync(filePath);
-    const creationDate = new Date(fileStats.birthtime).toISOString(); // Convert to ISO string
+    // Ensure all files in the directory have corresponding metadata in the database
+    for (const fileName of filesInDirectory) {
+      const filePath = path.join(UPLOADS_DIR, fileName);
+      const fileStats = await fs.stat(filePath);
+      const creationDate = new Date(fileStats.birthtime).toISOString(); // Convert to ISO string
 
-    const hash = crypto.createHash('md5');
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.on('data', (data) => hash.update(data));
-    const checksum = await new Promise<string>((resolve, reject) => {
-      fileStream.on('end', () => resolve(hash.digest('hex')));
-      fileStream.on('error', reject);
-    });
+      const hash = crypto.createHash('md5');
+      const fileStream = createReadStream(filePath);
+      fileStream.on('data', (data) => hash.update(data));
+      const checksum = await new Promise<string>((resolve, reject) => {
+        fileStream.on('end', () => resolve(hash.digest('hex')));
+        fileStream.on('error', reject);
+      });
 
-    const existingFile = await db.collection('fileStatuses').findOne({ fileName, checksum });
-    if (!existingFile) {
-      const fileId = uuidv4();
-      await db.collection('fileStatuses').insertOne({ fileId, fileName, checksum, creationDate, status: 'Uploaded' });
-    } else {
-      // Update the creation date for existing files
-      await db.collection('fileStatuses').updateOne(
-        { fileName, checksum },
-        { $set: { creationDate } }
-      );
+      const existingFile = await db.collection('fileStatuses').findOne({ fileName, checksum });
+      if (!existingFile) {
+        const fileId = uuidv4();
+        await db.collection('fileStatuses').insertOne({ fileId, fileName, checksum, creationDate, status: 'Uploaded' });
+      } else {
+        // Update the creation date for existing files
+        await db.collection('fileStatuses').updateOne(
+          { fileName, checksum },
+          { $set: { creationDate } }
+        );
+      }
     }
-  }
 
-  // Remove any metadata entries that do not have corresponding files in the directory
-  const metadataEntries = await db.collection('fileStatuses').find().toArray();
-  for (const entry of metadataEntries) {
-    if (!filesInDirectory.includes(entry.fileName)) {
-      await db.collection('fileStatuses').deleteOne({ fileName: entry.fileName });
+    // Remove any metadata entries that do not have corresponding files in the directory
+    const metadataEntries = await db.collection('fileStatuses').find().toArray();
+    for (const entry of metadataEntries) {
+      if (!filesInDirectory.includes(entry.fileName)) {
+        await db.collection('fileStatuses').deleteOne({ fileName: entry.fileName });
+      }
     }
+  } catch (error) {
+    console.error('Error synchronizing database with uploads:', error);
   }
 };
 
@@ -102,30 +126,35 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     return res.status(400).json({ message: 'No file uploaded' });
   }
 
-  const fileId = uuidv4();
-  const fileName = file.originalname;
-  const fileStats = fs.statSync(file.path);
-  const creationDate = new Date(fileStats.birthtime).toISOString(); // Convert to ISO string
+  try {
+    const fileId = uuidv4();
+    const fileName = file.originalname;
+    const fileStats = await fs.stat(file.path);
+    const creationDate = new Date(fileStats.birthtime).toISOString(); // Convert to ISO string
 
-  const hash = crypto.createHash('md5');
-  const fileStream = fs.createReadStream(file.path);
-  fileStream.on('data', (data) => hash.update(data));
-  const checksum = await new Promise<string>((resolve, reject) => {
-    fileStream.on('end', () => resolve(hash.digest('hex')));
-    fileStream.on('error', reject);
-  });
+    const hash = crypto.createHash('md5');
+    const fileStream = fs.createReadStream(file.path);
+    fileStream.on('data', (data) => hash.update(data));
+    const checksum = await new Promise<string>((resolve, reject) => {
+      fileStream.on('end', () => resolve(hash.digest('hex')));
+      fileStream.on('error', reject);
+    });
 
-  // Check if the file with the same name and checksum already exists
-  const existingFile = await db.collection('fileStatuses').findOne({ fileName, checksum });
+    // Check if the file with the same name and checksum already exists
+    const existingFile = await db.collection('fileStatuses').findOne({ fileName, checksum });
 
-  if (existingFile) {
-    return res.json({ message: 'File already exists', fileId: existingFile.fileId, fileName, checksum, creationDate });
+    if (existingFile) {
+      return res.json({ message: 'File already exists', fileId: existingFile.fileId, fileName, checksum, creationDate });
+    }
+
+    // Store the file ID, name, checksum, and creation date in the database
+    await db.collection('fileStatuses').insertOne({ fileId, fileName, checksum, creationDate, status: 'Uploaded' });
+
+    res.json({ message: 'File uploaded successfully', fileId, fileName, checksum, creationDate });
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    res.status(500).json({ message: 'Error uploading file' });
   }
-
-  // Store the file ID, name, checksum, and creation date in the database
-  await db.collection('fileStatuses').insertOne({ fileId, fileName, checksum, creationDate, status: 'Uploaded' });
-
-  res.json({ message: 'File uploaded successfully', fileId, fileName, checksum, creationDate });
 });
 
 // Endpoint to get metadata for all uploaded files
@@ -134,7 +163,8 @@ app.get('/files/metadata', async (req, res) => {
     const files = await db.collection('fileStatuses').find({}, { projection: { _id: 0, fileId: 1, fileName: 1, checksum: 1, creationDate: 1 } }).toArray();
     res.json(files);
   } catch (error) {
-    res.status(500).send('Error fetching files metadata');
+    console.error('Error fetching files metadata:', error);
+    res.status(500).json({ message: 'Error fetching files metadata' });
   }
 });
 
@@ -145,22 +175,22 @@ app.delete('/files/:fileId', async (req, res) => {
     const fileMetadata = await db.collection('fileStatuses').findOne({ fileId });
 
     if (!fileMetadata) {
-      return res.status(404).send('File not found');
+      return res.status(404).json({ message: 'File not found' });
     }
 
     const filePath = path.join(UPLOADS_DIR, fileMetadata.fileName);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    } else {
-      return res.status(404).send('File not found on filesystem');
+    try {
+      await fs.unlink(filePath);
+    } catch (err) {
+      return res.status(404).json({ message: 'File not found on filesystem' });
     }
 
     await db.collection('fileStatuses').deleteOne({ fileId });
 
-    res.status(200).send('File deleted successfully');
+    res.status(200).json({ message: 'File deleted successfully' });
   } catch (error) {
     console.error('Error deleting file:', error);
-    res.status(500).send('Error deleting file');
+    res.status(500).json({ message: 'Error deleting file' });
   }
 });
 
@@ -168,9 +198,9 @@ app.delete('/files/:fileId', async (req, res) => {
 app.delete('/files/all', async (req, res) => {
   try {
     // Delete all files from the filesystem
-    const files = fs.readdirSync(UPLOADS_DIR);
+    const files = await fs.readdir(UPLOADS_DIR);
     for (const file of files) {
-      fs.unlinkSync(path.join(UPLOADS_DIR, file));
+      await fs.unlink(path.join(UPLOADS_DIR, file));
     }
 
     // Delete all file metadata from the database
@@ -179,7 +209,7 @@ app.delete('/files/all', async (req, res) => {
     res.json({ message: 'All files deleted successfully' });
   } catch (error) {
     console.error('Error deleting all files:', error);
-    res.status(500).send('Error deleting all files');
+    res.status(500).json({ message: 'Error deleting all files' });
   }
 });
 
