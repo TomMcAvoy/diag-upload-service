@@ -1,5 +1,3 @@
-import goatUrl from "./goatUrl";
-
 export type FileType = {
   id: string;
   fileName: string;
