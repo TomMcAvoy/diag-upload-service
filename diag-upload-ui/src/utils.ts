@@ -17,9 +17,9 @@ export const fetcher = async (path: string, opts?: RequestInit) => {
   throw new Error(await response.text());
 };
 
-// Fetch all files from the backend
+// Fetch all files metadata from the backend
 export const getAllFiles = async (): Promise<FileType[]> => {
-  const files = await fetcher('/files');
+  const files = await fetcher('/files/metadata');
   console.log('Fetched files:', files); // Debug: Output fetched files
   files.forEach((file: FileType) => {
     console.log('Fetched creationDate:', file.creationDate); // Debug: Output each creationDate
