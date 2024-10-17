@@ -12,6 +12,7 @@ import { MongoClient, Db } from 'mongodb';
 import Redis from 'ioredis';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { pipeline } from 'stream/promises';
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -88,11 +89,14 @@ const synchronizeDatabaseWithUploads = async () => {
 
       const hash = crypto.createHash('md5');
       const fileStream = createReadStream(filePath);
-      fileStream.on('data', (data) => hash.update(data));
-      const checksum = await new Promise<string>((resolve, reject) => {
-        fileStream.on('end', () => resolve(hash.digest('hex')));
-        fileStream.on('error', reject);
+
+      await pipeline(fileStream, async (source) => {
+        for await (const chunk of source) {
+          hash.update(chunk);
+        }
       });
+
+      const checksum = hash.digest('hex');
 
       const existingFile = await db.collection('fileStatuses').findOne({ fileName, checksum });
       if (!existingFile) {
@@ -133,12 +137,15 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     const creationDate = new Date(fileStats.birthtime).toISOString(); // Convert to ISO string
 
     const hash = crypto.createHash('md5');
-    const fileStream = fs.createReadStream(file.path);
-    fileStream.on('data', (data) => hash.update(data));
-    const checksum = await new Promise<string>((resolve, reject) => {
-      fileStream.on('end', () => resolve(hash.digest('hex')));
-      fileStream.on('error', reject);
+    const fileStream = createReadStream(file.path);
+
+    await pipeline(fileStream, async (source) => {
+      for await (const chunk of source) {
+        hash.update(chunk);
+      }
     });
+
+    const checksum = hash.digest('hex');
 
     // Check if the file with the same name and checksum already exists
     const existingFile = await db.collection('fileStatuses').findOne({ fileName, checksum });
@@ -200,7 +207,12 @@ app.delete('/files/all', async (req, res) => {
     // Delete all files from the filesystem
     const files = await fs.readdir(UPLOADS_DIR);
     for (const file of files) {
-      await fs.unlink(path.join(UPLOADS_DIR, file));
+      try {
+        await fs.unlink(path.join(UPLOADS_DIR, file));
+      } catch (err) {
+        console.error('Error deleting file:', err);
+        return res.status(500).json({ message: 'Error deleting file from filesystem', error: err.message });
+      }
     }
 
     // Delete all file metadata from the database
@@ -209,7 +221,7 @@ app.delete('/files/all', async (req, res) => {
     res.json({ message: 'All files deleted successfully' });
   } catch (error) {
     console.error('Error deleting all files:', error);
-    res.status(500).json({ message: 'Error deleting all files' });
+    res.status(500).json({ message: 'Error deleting all files', error: error.message });
   }
 });
 
