@@ -43,6 +43,9 @@ const mongoClient = new MongoClient('mongodb://localhost:27017');
 mongoClient.connect().then((client) => {
   db = client.db('fileUploadService');
   console.log('Connected to MongoDB');
+
+  // Synchronize the database with the uploads directory on startup
+  synchronizeDatabaseWithUploads();
 });
 
 // Redis setup
@@ -52,6 +55,35 @@ const redisClient = new Redis({
   maxRetriesPerRequest: null,
   enableReadyCheck: false
 });
+
+// Function to synchronize the database with the uploads directory
+const synchronizeDatabaseWithUploads = async () => {
+  const uploadPath = path.join(__dirname, 'uploads');
+  const filesInDirectory = fs.readdirSync(uploadPath);
+
+  // Ensure all files in the directory have corresponding metadata in the database
+  for (const fileName of filesInDirectory) {
+    const filePath = path.join(uploadPath, fileName);
+    const fileBuffer = fs.readFileSync(filePath);
+    const checksum = crypto.createHash('md5').update(fileBuffer).digest('hex');
+    const fileStats = fs.statSync(filePath);
+    const creationDate = fileStats.birthtime.toISOString(); // Convert to ISO string
+
+    const existingFile = await db.collection('fileStatuses').findOne({ fileName, checksum });
+    if (!existingFile) {
+      const fileId = uuidv4();
+      await db.collection('fileStatuses').insertOne({ fileId, fileName, checksum, creationDate, status: 'Uploaded' });
+    }
+  }
+
+  // Remove any metadata entries that do not have corresponding files in the directory
+  const metadataEntries = await db.collection('fileStatuses').find().toArray();
+  for (const entry of metadataEntries) {
+    if (!filesInDirectory.includes(entry.fileName)) {
+      await db.collection('fileStatuses').deleteOne({ fileName: entry.fileName });
+    }
+  }
+};
 
 // Endpoint to handle file uploads
 app.post('/upload', upload.single('file'), async (req, res) => {
@@ -64,24 +96,75 @@ app.post('/upload', upload.single('file'), async (req, res) => {
   const fileName = file.originalname;
   const fileBuffer = fs.readFileSync(file.path);
   const checksum = crypto.createHash('md5').update(fileBuffer).digest('hex');
+  const fileStats = fs.statSync(file.path);
+  const creationDate = fileStats.birthtime.toISOString(); // Convert to ISO string
 
   // Check if the file with the same name and checksum already exists
   const existingFile = await db.collection('fileStatuses').findOne({ fileName, checksum });
 
   if (existingFile) {
-    return res.json({ message: 'File already exists', fileId: existingFile.fileId, fileName, checksum });
+    return res.json({ message: 'File already exists', fileId: existingFile.fileId, fileName, checksum, creationDate });
   }
 
-  // Store the file ID, name, and checksum in the database
-  await db.collection('fileStatuses').insertOne({ fileId, fileName, checksum, status: 'Uploaded' });
+  // Store the file ID, name, checksum, and creation date in the database
+  await db.collection('fileStatuses').insertOne({ fileId, fileName, checksum, creationDate, status: 'Uploaded' });
 
-  res.json({ message: 'File uploaded successfully', fileId, fileName, checksum });
+  res.json({ message: 'File uploaded successfully', fileId, fileName, checksum, creationDate });
 });
 
 // Endpoint to get metadata for all uploaded files
 app.get('/files', async (req, res) => {
-  const files = await db.collection('fileStatuses').find({}, { projection: { _id: 0, fileId: 1, fileName: 1, checksum: 1 } }).toArray();
+  const files = await db.collection('fileStatuses').find({}, { projection: { _id: 0, fileId: 1, fileName: 1, checksum: 1, creationDate: 1 } }).toArray();
   res.json(files);
+});
+
+// Endpoint to delete a specific file
+app.delete('/files/:fileName', async (req, res) => {
+  const { fileName } = req.params;
+
+  // Decode the file name
+  const decodedFileName = decodeURIComponent(fileName);
+
+  // Find the file metadata in the database
+  const fileMetadata = await db.collection('fileStatuses').findOne({ fileName: decodedFileName });
+
+  if (!fileMetadata) {
+    return res.status(404).json({ message: 'File not found' });
+  }
+
+  // Delete the file from the filesystem
+  const filePath = path.join(__dirname, 'uploads', decodedFileName);
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+
+  // Delete the file metadata from the database
+  await db.collection('fileStatuses').deleteOne({ fileName: decodedFileName });
+
+  // Retrieve the updated metadata list
+  const updatedFiles = await db.collection('fileStatuses').find({}, { projection: { _id: 0, fileId: 1, fileName: 1, checksum: 1, creationDate: 1 } }).toArray();
+
+  res.json({ message: 'File deleted successfully', files: updatedFiles });
+});
+
+// Endpoint to delete all files
+app.delete('/files/all', async (req, res) => {
+  // Delete all files from the filesystem
+  const uploadPath = path.join(__dirname, 'uploads');
+  fs.readdir(uploadPath, (err, files) => {
+    if (err) throw err;
+
+    for (const file of files) {
+      fs.unlink(path.join(uploadPath, file), err => {
+        if (err) throw err;
+      });
+    }
+  });
+
+  // Delete all file metadata from the database
+  await db.collection('fileStatuses').deleteMany({});
+
+  res.json({ message: 'All files deleted successfully' });
 });
 
 // Status endpoint to return API status

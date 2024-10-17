@@ -4,19 +4,29 @@ interface Item {
   fileId: string;
   fileName: string;
   checksum: string;
+  creationDate: string; // Add creationDate to the Item interface
 }
 
 const App: React.FC = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [uploadMessage, setUploadMessage] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch items from the server
     fetch('http://localhost:8000/files')
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch items');
+        }
+        return response.json();
+      })
       .then(data => setItems(data))
-      .catch(error => console.error('Error fetching items:', error));
+      .catch(error => {
+        console.error('Error fetching items:', error);
+        setError('Failed to fetch items');
+      });
   }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,26 +63,68 @@ const App: React.FC = () => {
       setItems(data);
     } catch (error) {
       console.error('Error fetching items:', error);
+      setError('Failed to fetch items');
     }
   };
 
-  const handleFileDelete = async (fileId: string) => {
-    try {
-      const response = await fetch(`http://localhost:8000/files/${fileId}`, {
-        method: 'DELETE',
+  const handleDelete = (fileName: string) => {
+    fetch(`http://localhost:8000/files/${encodeURIComponent(fileName)}`, {
+      method: 'DELETE',
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('File delete error');
+        }
+        return response.json();
+      })
+      .then(data => {
+        setItems(data.files);
+      })
+      .catch(error => {
+        console.error('File delete error', error);
+        setError('Failed to delete file');
       });
+  };
 
-      const result = await response.json();
-      setUploadMessage(result.message);
-      fetchItems(); // Refresh the file list after deletion
-    } catch (error) {
-      console.error('File delete error', error);
-      setUploadMessage('File delete failed');
+  const handleDeleteAll = () => {
+    if (window.confirm('Are you sure you want to delete all files?')) {
+      fetch('http://localhost:8000/files/all', {
+        method: 'DELETE',
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to delete all files');
+          }
+          return response.json();
+        })
+        .then(() => {
+          setItems([]);
+        })
+        .catch(error => {
+          console.error('Failed to delete all files', error);
+          setError('Failed to delete all files');
+        });
     }
   };
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
   return (
     <div>
+      <header style={{ textAlign: 'center' }}>
+        <iframe
+          src="https://services.whitestartups.com"
+          title="White Startups Services"
+          style={{
+            width: '80%',
+            height: '150px',
+            border: 'none',
+            marginBottom: '20px',
+          }}
+        ></iframe>
+      </header>
       <div
         onDrop={(e) => {
           e.preventDefault();
@@ -95,15 +147,30 @@ const App: React.FC = () => {
       </div>
       <button onClick={handleFileUpload}>Upload File</button>
       {uploadMessage && <p>{uploadMessage}</p>}
+      <button onClick={handleDeleteAll}>Delete All</button>
       <h2>Uploaded Files</h2>
-      <ul>
-        {items.map((item) => (
-          <li key={item.fileId}>
-            <strong>{item.fileName}</strong> (UUID: {item.fileId}, Checksum: {item.checksum})
-            <button onClick={() => handleFileDelete(item.fileId)}>Delete</button>
-          </li>
-        ))}
-      </ul>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr>
+            <th style={{ border: '1px solid #ddd', padding: '8px' }}>File Name</th>
+            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Checksum</th>
+            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Creation Date</th>
+            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item) => (
+            <tr key={item.fileId}>
+              <td style={{ border: '1px solid #ddd', padding: '8px' }}>{item.fileName}</td>
+              <td style={{ border: '1px solid #ddd', paddingRight: '8px' }}>{item.checksum}</td>
+              <td style={{ border: '1px solid #ddd', padding: '8px' }}>{new Date(item.creationDate).toLocaleString()}</td>
+              <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>
+                <button onClick={() => handleDelete(item.fileName)}>Delete</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };
