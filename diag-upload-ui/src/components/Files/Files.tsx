@@ -19,7 +19,7 @@ const columns: ColumnsType<FileType> = [
         size="middle"
         style={{ display: 'flex', justifyContent: 'space-between' }}
       >
-        <Link to={`/${record.id}`}>View</Link>
+        <Link to={`/${record.fileId}`}>View</Link>
       </Space>
     ),
   },
@@ -40,7 +40,7 @@ const Files = ({ appState }: { appState: string }) => {
 
   return (
     <Table
-      rowKey={({ id }) => id}
+      rowKey={({ fileId }) => fileId}
       columns={columns}
       dataSource={files}
       pagination={false}
