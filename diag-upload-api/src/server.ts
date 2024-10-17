@@ -45,7 +45,7 @@ const storage = multer.diskStorage({
       await fs.mkdir(UPLOADS_DIR, { recursive: true });
       cb(null, UPLOADS_DIR);
     } catch (err) {
-      cb(err);
+      cb(err as Error, UPLOADS_DIR); // Provide both arguments
     }
   },
   filename: (req, file, cb) => {
@@ -187,9 +187,17 @@ app.delete('/files/:fileId', async (req, res) => {
 
     const filePath = path.join(UPLOADS_DIR, fileMetadata.fileName);
     try {
+      // Check if the file exists before attempting to delete it
+      try {
+        await fs.access(filePath);
+      } catch (err) {
+        console.warn(`File not found, skipping deletion: ${filePath}`);
+        return res.status(404).json({ message: 'File not found on filesystem' });
+      }
+
       await fs.unlink(filePath);
     } catch (err) {
-      return res.status(404).json({ message: 'File not found on filesystem' });
+      return res.status(500).json({ message: 'Error deleting file from filesystem', error: (err as Error).message });
     }
 
     await db.collection('fileStatuses').deleteOne({ fileId });
@@ -197,31 +205,53 @@ app.delete('/files/:fileId', async (req, res) => {
     res.status(200).json({ message: 'File deleted successfully' });
   } catch (error) {
     console.error('Error deleting file:', error);
-    res.status(500).json({ message: 'Error deleting file' });
+    res.status(500).json({ message: 'Error deleting file', error: (error as Error).message });
   }
 });
 
 // Endpoint to delete all files
 app.delete('/files/all', async (req, res) => {
   try {
-    // Delete all files from the filesystem
-    const files = await fs.readdir(UPLOADS_DIR);
+    // Read all files in the uploads directory
+    let files;
+    try {
+      files = await fs.readdir(UPLOADS_DIR);
+    } catch (err) {
+      console.error('Error reading directory:', err);
+      return res.status(500).json({ message: 'Error reading directory', error: (err as Error).message });
+    }
+
+    // Delete each file
     for (const file of files) {
+      const filePath = path.join(UPLOADS_DIR, file);
       try {
-        await fs.unlink(path.join(UPLOADS_DIR, file));
+        // Check if the file exists before attempting to delete it
+        try {
+          await fs.access(filePath);
+        } catch (err) {
+          console.warn(`File not found, skipping deletion: ${filePath}`);
+          continue;
+        }
+
+        await fs.unlink(filePath);
       } catch (err) {
         console.error('Error deleting file:', err);
-        return res.status(500).json({ message: 'Error deleting file from filesystem', error: err.message });
+        return res.status(500).json({ message: 'Error deleting file from filesystem', error: (err as Error).message });
       }
     }
 
     // Delete all file metadata from the database
-    await db.collection('fileStatuses').deleteMany({});
+    try {
+      await db.collection('fileStatuses').deleteMany({});
+    } catch (err) {
+      console.error('Error deleting file metadata from database:', err);
+      return res.status(500).json({ message: 'Error deleting file metadata from database', error: (err as Error).message });
+    }
 
     res.json({ message: 'All files deleted successfully' });
   } catch (error) {
     console.error('Error deleting all files:', error);
-    res.status(500).json({ message: 'Error deleting all files', error: error.message });
+    res.status(500).json({ message: 'Error deleting all files', error: (error as Error).message });
   }
 });
 
