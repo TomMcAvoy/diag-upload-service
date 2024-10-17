@@ -2,8 +2,8 @@ import goatUrl from "./goatUrl";
 
 export type FileType = {
   id: string;
-  name: string;
-  downloadUrl: string;
+  fileName: string;
+  checksum: string;
   creationDate: string; // Add creationDate to the FileType
 };
 

@@ -1,7 +1,9 @@
+
 import React, { useEffect, useState } from 'react';
+import { getAllFiles, uploadFile, deleteFile } from './utils'; // Import the functions
 
 interface Item {
-  fileId: string;
+  id: string;
   fileName: string;
   checksum: string;
   creationDate: string; // Add creationDate to the Item interface
@@ -12,6 +14,7 @@ const App: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [uploadMessage, setUploadMessage] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     // Fetch items from the server
@@ -25,15 +28,7 @@ const App: React.FC = () => {
   const handleFileUpload = async () => {
     if (file) {
       try {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch('http://localhost:8000/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        const result = await response.json();
+        const result = await uploadFile(file);
         console.log('Upload result:', result); // Debug: Output upload result
         setUploadMessage(result.message);
         fetchItems(); // Refresh the file list after upload
@@ -48,8 +43,7 @@ const App: React.FC = () => {
 
   const fetchItems = async () => {
     try {
-      const response = await fetch('http://localhost:8000/files/metadata');
-      const data = await response.json();
+      const data = await getAllFiles();
       console.log('Fetched items:', data); // Debug: Output fetched items
       data.forEach((item: Item) => {
         console.log('Fetched creationDate:', item.creationDate); // Debug: Output each creationDate
@@ -61,24 +55,15 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDelete = (fileName: string) => {
-    fetch(`http://localhost:8000/files/${encodeURIComponent(fileName)}`, {
-      method: 'DELETE',
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('File delete error');
-        }
-        return response.json();
-      })
-      .then(data => {
-        console.log('Delete result:', data); // Debug: Output delete result
-        setItems(data.files);
-      })
-      .catch(error => {
-        console.error('File delete error', error);
-        setError('Failed to delete file');
-      });
+  const handleDelete = async (fileId: string) => {
+    try {
+      const result = await deleteFile(fileId);
+      console.log('Delete result:', result); // Debug: Output delete result
+      fetchItems(); // Refresh the file list after deletion
+    } catch (error) {
+      console.error('File delete error', error);
+      setError('Failed to delete file');
+    }
   };
 
   const handleDeleteAll = () => {
@@ -101,6 +86,22 @@ const App: React.FC = () => {
           setError('Failed to delete all files');
         });
     }
+  };
+
+  const handleCheckboxChange = (fileId: string) => {
+    setSelectedItems(prevSelectedItems => {
+      const newSelectedItems = new Set(prevSelectedItems);
+      if (newSelectedItems.has(fileId)) {
+        newSelectedItems.delete(fileId);
+      } else {
+        newSelectedItems.add(fileId);
+      }
+      return newSelectedItems;
+    });
+  };
+
+  const handleRowClick = (fileId: string) => {
+    setSelectedItems(new Set([fileId]));
   };
 
   if (error) {
@@ -148,6 +149,7 @@ const App: React.FC = () => {
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
+            <th style={{ border: '1px solid #ddd', padding: '8px' }}></th>
             <th style={{ border: '1px solid #ddd', padding: '8px' }}>File Name</th>
             <th style={{ border: '1px solid #ddd', padding: '8px' }}>Checksum</th>
             <th style={{ border: '1px solid #ddd', padding: '8px' }}>Creation Date</th>
@@ -155,13 +157,31 @@ const App: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          {items.map((item) => (
-            <tr key={item.fileId}>
+          {items.map((item, index) => (
+            <tr
+              key={item.id}
+              onClick={() => handleRowClick(item.id)}
+              style={{
+                backgroundColor: selectedItems.has(item.id)
+                  ? '#d3d3d3'
+                  : index % 2 === 0
+                  ? '#f9f9f9'
+                  : '#ffffff',
+                cursor: 'pointer',
+              }}
+            >
+              <td style={{ border: '1px solid #ddd', padding: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={selectedItems.has(item.id)}
+                  onChange={() => handleCheckboxChange(item.id)}
+                />
+              </td>
               <td style={{ border: '1px solid #ddd', padding: '8px' }}>{item.fileName}</td>
               <td style={{ border: '1px solid #ddd', paddingRight: '8px' }}>{item.checksum}</td>
               <td style={{ border: '1px solid #ddd', padding: '8px' }}>{new Date(item.creationDate).toLocaleString()}</td>
               <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>
-                <button onClick={() => handleDelete(item.fileName)}>Delete</button>
+                <button onClick={() => handleDelete(item.id)}>Delete</button>
               </td>
             </tr>
           ))}
