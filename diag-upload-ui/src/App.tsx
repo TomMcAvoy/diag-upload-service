@@ -15,18 +15,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     // Fetch items from the server
-    fetch('http://localhost:8000/files')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to fetch items');
-        }
-        return response.json();
-      })
-      .then(data => setItems(data))
-      .catch(error => {
-        console.error('Error fetching items:', error);
-        setError('Failed to fetch items');
-      });
+    fetchItems();
   }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,6 +34,7 @@ const App: React.FC = () => {
         });
 
         const result = await response.json();
+        console.log('Upload result:', result); // Debug: Output upload result
         setUploadMessage(result.message);
         fetchItems(); // Refresh the file list after upload
       } catch (error) {
@@ -58,8 +48,12 @@ const App: React.FC = () => {
 
   const fetchItems = async () => {
     try {
-      const response = await fetch('http://localhost:8000/files');
+      const response = await fetch('http://localhost:8000/files/metadata');
       const data = await response.json();
+      console.log('Fetched items:', data); // Debug: Output fetched items
+      data.forEach((item: Item) => {
+        console.log('Fetched creationDate:', item.creationDate); // Debug: Output each creationDate
+      });
       setItems(data);
     } catch (error) {
       console.error('Error fetching items:', error);
@@ -78,6 +72,7 @@ const App: React.FC = () => {
         return response.json();
       })
       .then(data => {
+        console.log('Delete result:', data); // Debug: Output delete result
         setItems(data.files);
       })
       .catch(error => {
@@ -98,6 +93,7 @@ const App: React.FC = () => {
           return response.json();
         })
         .then(() => {
+          console.log('All files deleted'); // Debug: Output delete all result
           setItems([]);
         })
         .catch(error => {
