@@ -87,3 +87,5 @@ dev-container/env/main.env
 infrastructure/ami/local.pkrvars.hcl
 infrastructure/terraform/tenant/root/*.tfvars.json
 infrastructure/terraform/tenant/root/license.auto.tfvars
+uploads/
+**/uploads/
