@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { getAllFiles, uploadFile, deleteFile } from './utils'; // Import the functions
 
@@ -6,7 +5,7 @@ interface Item {
   id: string;
   fileName: string;
   checksum: string;
-  creationDate: string; // Add creationDate to the Item interface
+  creationDate: string;
 }
 
 const App: React.FC = () => {
@@ -29,11 +28,9 @@ const App: React.FC = () => {
     if (file) {
       try {
         const result = await uploadFile(file);
-        console.log('Upload result:', result); // Debug: Output upload result
         setUploadMessage(result.message);
         fetchItems(); // Refresh the file list after upload
       } catch (error) {
-        console.error('File upload error', error);
         setUploadMessage('File upload failed');
       }
     } else {
@@ -44,24 +41,17 @@ const App: React.FC = () => {
   const fetchItems = async () => {
     try {
       const data = await getAllFiles();
-      console.log('Fetched items:', data); // Debug: Output fetched items
-      data.forEach((item: Item) => {
-        console.log('Fetched creationDate:', item.creationDate); // Debug: Output each creationDate
-      });
       setItems(data);
     } catch (error) {
-      console.error('Error fetching items:', error);
       setError('Failed to fetch items');
     }
   };
 
   const handleDelete = async (fileId: string) => {
     try {
-      const result = await deleteFile(fileId);
-      console.log('Delete result:', result); // Debug: Output delete result
+      await deleteFile(fileId);
       fetchItems(); // Refresh the file list after deletion
     } catch (error) {
-      console.error('File delete error', error);
       setError('Failed to delete file');
     }
   };
@@ -78,11 +68,9 @@ const App: React.FC = () => {
           return response.json();
         })
         .then(() => {
-          console.log('All files deleted'); // Debug: Output delete all result
           setItems([]);
         })
         .catch(error => {
-          console.error('Failed to delete all files', error);
           setError('Failed to delete all files');
         });
     }
