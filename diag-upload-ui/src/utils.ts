@@ -4,7 +4,7 @@ export type FileType = {
   id: string;
   fileName: string;
   checksum: string;
-  creationDate: string; // Add creationDate to the FileType
+  creationDate: string;
 };
 
 const basePath = 'http://localhost:8000';
@@ -20,10 +20,6 @@ export const fetcher = async (path: string, opts?: RequestInit) => {
 // Fetch all files metadata from the backend
 export const getAllFiles = async (): Promise<FileType[]> => {
   const files = await fetcher('/files/metadata');
-  console.log('Fetched files:', files); // Debug: Output fetched files
-  files.forEach((file: FileType) => {
-    console.log('Fetched creationDate:', file.creationDate); // Debug: Output each creationDate
-  });
   return files;
 };
 
@@ -74,9 +70,4 @@ export const deleteFile = async (fileId: string): Promise<{ message: string }> =
     return response.json();
   }
   throw new Error(await response.text());
-};
-
-// Example usage of goatUrl (assuming it was used for some specific purpose)
-export const getGoatUrl = (): string => {
-  return goatUrl;
 };
