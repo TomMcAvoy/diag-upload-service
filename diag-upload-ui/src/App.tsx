@@ -1,15 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { getAllFiles, uploadFile, deleteFile } from './utils'; // Import the functions
+import { getAllFiles, uploadFile, deleteFile, FileType } from './utils'; // Import the functions and FileType
 
-interface Item {
-  id: string;
-  fileName: string;
-  checksum: string;
-  creationDate: string;
-}
-
-const App: React.FC = () => {
-  const [items, setItems] = useState<Item[]>([]);
+  const App: React.FC = () => {
+  const [items, setItems] = useState<FileType[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [uploadMessage, setUploadMessage] = useState<string>('');
   const [error, setError] = useState<string | null>(null);

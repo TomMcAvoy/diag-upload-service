@@ -63,14 +63,27 @@ const synchronizeDatabaseWithUploads = async () => {
   // Ensure all files in the directory have corresponding metadata in the database
   for (const fileName of filesInDirectory) {
     const filePath = path.join(uploadPath, fileName);
-    const fileBuffer = fs.readFileSync(filePath);
-    const checksum = crypto.createHash('md5').update(fileBuffer).digest('hex');
-    const creationDate = "2023-01-01T00:00:00.000Z"; // Hardcoded ISO string date for testing
+    const fileStats = fs.statSync(filePath);
+    const creationDate = new Date(fileStats.birthtime).toISOString(); // Convert to ISO string
+
+    const hash = crypto.createHash('md5');
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.on('data', (data) => hash.update(data));
+    const checksum = await new Promise<string>((resolve, reject) => {
+      fileStream.on('end', () => resolve(hash.digest('hex')));
+      fileStream.on('error', reject);
+    });
 
     const existingFile = await db.collection('fileStatuses').findOne({ fileName, checksum });
     if (!existingFile) {
       const fileId = uuidv4();
       await db.collection('fileStatuses').insertOne({ fileId, fileName, checksum, creationDate, status: 'Uploaded' });
+    } else {
+      // Update the creation date for existing files
+      await db.collection('fileStatuses').updateOne(
+        { fileName, checksum },
+        { $set: { creationDate } }
+      );
     }
   }
 
@@ -92,9 +105,16 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
   const fileId = uuidv4();
   const fileName = file.originalname;
-  const fileBuffer = fs.readFileSync(file.path);
-  const checksum = crypto.createHash('md5').update(fileBuffer).digest('hex');
-  const creationDate = "2023-01-01T00:00:00.000Z"; // Hardcoded ISO string date for testing
+  const fileStats = fs.statSync(file.path);
+  const creationDate = new Date(fileStats.birthtime).toISOString(); // Convert to ISO string
+
+  const hash = crypto.createHash('md5');
+  const fileStream = fs.createReadStream(file.path);
+  fileStream.on('data', (data) => hash.update(data));
+  const checksum = await new Promise<string>((resolve, reject) => {
+    fileStream.on('end', () => resolve(hash.digest('hex')));
+    fileStream.on('error', reject);
+  });
 
   // Check if the file with the same name and checksum already exists
   const existingFile = await db.collection('fileStatuses').findOne({ fileName, checksum });
