@@ -78,7 +78,7 @@ self.onmessage = async (event: MessageEvent) => {
       }
     } finally {
       // Release the lock
-      await redlock.unlock(lock);
+      await lock.release();
     }
   } catch (error) {
     self.postMessage({ status: 'error', error: `File ${fileId} is currently locked.` });

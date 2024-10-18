@@ -1,6 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
 import { createReadStream } from 'fs';
 import cors from 'cors';
@@ -19,6 +20,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -97,7 +100,7 @@ async function init() {
       // Ensure all files in the directory have corresponding metadata in the database
       for (const fileName of filesInDirectory) {
         const filePath = path.join(UPLOADS_DIR, fileName);
-        fileStats = await fs.stat(filePath);
+        const fileStats = await fs.stat(filePath);
         const creationDate = new Date(fileStats.birthtime).toISOString(); // Convert to ISO string
 
         const hash = crypto.createHash('md5');
@@ -170,10 +173,10 @@ async function init() {
       // Store the file ID, name, checksum, and creation date in the database
       await db.collection('fileStatuses').insertOne({ fileId, fileName, checksum, creationDate, status: 'Uploaded' });
 
-      res.json({ message: 'File uploaded successfully', fileId, fileName, checksum, creationDate });
+      return res.json({ message: 'File uploaded successfully', fileId, fileName, checksum, creationDate });
     } catch (error) {
       console.error('Error uploading file:', error);
-      res.status(500).json({ message: 'Error uploading file' });
+      return res.status(500).json({ message: 'Error uploading file' });
     }
   });
 
@@ -181,10 +184,10 @@ async function init() {
   app.get('/files/metadata', async (req, res) => {
     try {
       const files = await db.collection('fileStatuses').find({}, { projection: { _id: 0, fileId: 1, fileName: 1, checksum: 1, creationDate: 1 } }).toArray();
-      res.json(files);
+      return res.json(files);
     } catch (error) {
       console.error('Error fetching files metadata:', error);
-      res.status(500).json({ message: 'Error fetching files metadata' });
+      return res.status(500).json({ message: 'Error fetching files metadata' });
     }
   });
 
@@ -207,10 +210,10 @@ async function init() {
 
       await db.collection('fileStatuses').deleteOne({ fileId });
 
-      res.status(200).json({ message: 'File deleted successfully' });
+      return res.status(200).json({ message: 'File deleted successfully' });
     } catch (error) {
       console.error('Error deleting file:', error);
-      res.status(500).json({ message: 'Error deleting file' });
+      return res.status(500).json({ message: 'Error deleting file' });
     }
   });
 
@@ -233,16 +236,16 @@ async function init() {
       // Delete all file metadata from the database
       await db.collection('fileStatuses').deleteMany({});
 
-      res.json({ message: 'All files deleted successfully' });
+      return res.json({ message: 'All files deleted successfully' });
     } catch (error) {
       console.error('Error deleting all files:', error);
-      res.status(500).json({ message: 'Error deleting all files', error: (error as Error).message });
+      return res.status(500).json({ message: 'Error deleting all files', error: (error as Error).message });
     }
   });
 
   // Status endpoint to return API status
   app.get('/status', (req, res) => {
-    res.json({ status: 'Server is running' });
+    return res.json({ status: 'Server is running' });
   });
 
   // Create HTTP server and integrate with socket.io
@@ -266,3 +269,4 @@ async function init() {
 init().catch(error => {
   console.error('Failed to initialize server:', error);
 });
+

@@ -119,5 +119,3 @@ export default buildConfig({
   // for this before reaching 3.0 stable
   sharp,
 })
-
-export default payload_config
