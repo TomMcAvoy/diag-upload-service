@@ -1,21 +1,27 @@
 import Redis from 'ioredis';
 import Redlock from 'redlock';
+
+// Initialize Redis client
 const redis = new Redis();
-const redlock = new Redlock([redis], {
+
+// Initialize Redlock with Redis client
+const redlock = new Redlock([redis as any], {
   driftFactor: 0.01, // time in ms
   retryCount: 10,
   retryDelay: 200, // time in ms
   retryJitter: 200 // time in ms
 });
 
+// Handle messages from the main thread
 self.onmessage = async (event: MessageEvent) => {
-  const {action, file, fileId, apiUrl} = event.data;
+  const { action, file, fileId, apiUrl } = event.data;
 
   const lockKey = `lock:${fileId}`;
   const versionKey = `version:${fileId}`;
 
   try {
-    const lock = await redlock.acquire([lockKey], 10000); // 10 seconds TTL
+    // Acquire a lock with a 10-second TTL
+    const lock = await redlock.acquire([lockKey], 10000);
 
     try {
       switch (action) {
@@ -34,9 +40,13 @@ self.onmessage = async (event: MessageEvent) => {
             // Update version number
             const version = await redis.incr(versionKey);
 
-            self.postMessage({status: 'success', result, version});
+            self.postMessage({ status: 'success', result, version });
           } catch (error) {
-            self.postMessage({status: 'error', error});
+            if (error instanceof Error) {
+              self.postMessage({ status: 'error', error: error.message });
+            } else {
+              self.postMessage({ status: 'error', error: 'An unknown error occurred' });
+            }
           }
           break;
 
@@ -51,21 +61,26 @@ self.onmessage = async (event: MessageEvent) => {
             // Update version number
             const version = await redis.incr(versionKey);
 
-            self.postMessage({status: 'success', result, version});
+            self.postMessage({ status: 'success', result, version });
           } catch (error) {
-            self.postMessage({status: 'error', error});
+            if (error instanceof Error) {
+              self.postMessage({ status: 'error', error: error.message });
+            } else {
+              self.postMessage({ status: 'error', error: 'An unknown error occurred' });
+            }
           }
           break;
 
         // Add more CRUD operations as needed
 
         default:
-          self.postMessage({status: 'error', error: 'Unknown action'});
+          self.postMessage({ status: 'error', error: 'Unknown action' });
       }
     } finally {
-      await lock.release();
+      // Release the lock
+      await redlock.unlock(lock);
     }
   } catch (error) {
-    self.postMessage({status: 'error', error: `File ${fileId} is currently locked.`});
+    self.postMessage({ status: 'error', error: `File ${fileId} is currently locked.` });
   }
 };
