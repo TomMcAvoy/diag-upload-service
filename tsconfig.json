@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "es2017",
-    "module": "esnext",
+    "module": "NodeNext",
     "rootDir": "./src", 
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -9,7 +9,6 @@
     "sourceMap": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "nodenext",
-    "module": "NodeNext",
     "baseUrl": "./",
     "paths": {
       "payload": ["node_modules/payload"]
