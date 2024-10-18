@@ -1,28 +1,7 @@
-import path from 'path'
-// import { postgresAdapter } from '@payloadcms/db-postgres'
-import { en } from 'payload/i18n/en'
-import {
-  AlignFeature,
-  BlockquoteFeature,
-  BlocksFeature,
-  BoldFeature,
-  ChecklistFeature,
-  HeadingFeature,
-  IndentFeature,
-  InlineCodeFeature,
-  ItalicFeature,
-  lexicalEditor,
-  LinkFeature,
-  OrderedListFeature,
-  ParagraphFeature,
-  RelationshipFeature,
-  UnorderedListFeature,
-  UploadFeature,
-} from '@payloadcms/richtext-lexical'
-import { mongooseAdapter } from '@payloadcms/db-mongodb'
-import { buildConfig } from 'payload/config'
-import sharp from 'sharp'
-import { fileURLToPath } from 'url'
+// payload.config.ts
+const payload = require('./payload-wrapper.cjs');
+
+// Your configuration code here
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -119,5 +98,3 @@ export default buildConfig({
   // for this before reaching 3.0 stable
   sharp,
 })
-
-export default payload_config
