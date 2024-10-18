@@ -9,7 +9,7 @@
     "sourceMap": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "nodenext",
-    "module":"NodeNext",
+    "module": "NodeNext",
     "baseUrl": "./",
     "paths": {
       "payload": ["node_modules/payload"]
