@@ -1,16 +1,20 @@
 {
   "compilerOptions": {
-    "target": "es6",
-    "module": "CommonJS",
+    "target": "es2017",
+    "module": "esnext",
     "rootDir": "./src", 
     "esModuleInterop": true,
     "skipLibCheck": true,
     "strict": true,
     "sourceMap": true,
     "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "nodenext",
+    "module":"NodeNext",
+    "baseUrl": "./",
+    "paths": {
+      "payload": ["node_modules/payload"]
+    }
   },
   "include": ["src/**/*.ts"], 
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": []
 }

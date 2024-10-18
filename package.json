@@ -4,7 +4,7 @@
   "description": "Diag Upload API",
   "main": "index.js",
   "scripts": {
-    "start": "ts-node-dev --respawn src/server",
+    "start": "ts-node-dev --transpile-only --respawn src/server",
     "test": "jest",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "lint:fix": "eslint 'src/**/*.{ts,tsx}' --fix",
@@ -59,6 +59,7 @@
     "husky": "^8.0.1",
     "jest": "^29.0.3",
     "lint-staged": "^13.0.3",
+    "payload": "^2.30.2",
     "prettier": "^2.7.1",
     "style-loader": "^4.0.0",
     "ts-jest": "^29.0.1",

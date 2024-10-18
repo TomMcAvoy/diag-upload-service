@@ -13,6 +13,9 @@ import Redis from 'ioredis';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { pipeline } from 'stream/promises';
+import payload from 'payload'
+
+require('dotenv').config()
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -36,7 +39,17 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100 // limit each IP to 100 requests per windowMs
 });
+
 app.use(limiter);
+
+ await payload.init({
+    secret: process.env.PAYLOAD_SECRET,
+    express: app,
+  })
+
+
+
+
 
 // Set up storage for uploaded files
 const storage = multer.diskStorage({
