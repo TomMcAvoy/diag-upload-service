@@ -10,8 +10,7 @@
     "strict": true,
     "allowJs": true,
     "checkJs": true,
-    "lib": [
-      "dom",
+ls      "dom",
       "dom.iterable",
       "esnext"
     ],
