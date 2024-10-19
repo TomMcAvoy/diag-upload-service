@@ -11,7 +11,6 @@ import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import { MongoClient, Db } from 'mongodb';
 import Redis from 'ioredis';
-import Redlock from 'redlock';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { pipeline } from 'stream/promises';
@@ -19,15 +18,17 @@ import payload from 'payload';
 import dotenv from 'dotenv';
 import next from 'next';
 
+console.log('server.ts is being executed');
 
 dotenv.config();
 
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 const dev = process.env.NODE_ENV !== 'production';
 const nextApp = next({ dev });
 const handle = nextApp.getRequestHandler();
+
 const app = express();
 const PORT = process.env.PORT || 8000;
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
@@ -35,24 +36,13 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017';
 const REDIS_HOST = process.env.REDIS_HOST || 'localhost';
 const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379', 10);
 
-console.log('server.ts is being executed');
-
 nextApp.prepare().then(() => {
-
-  /**
-   * Enable CORS for all routes
-   */
-  app.use(cors({
-    origin: 'http://localhost:3000'
-  }));
-
-  // Security middleware
+  app.use(cors({ origin: 'http://localhost:3000' }));
   app.use(helmet());
 
-  // Rate limiting
   const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100 // limit each IP to 100 requests per windowMs
+    windowMs: 15 * 60 * 1000,
+    max: 100,
   });
 
   app.use(limiter);
@@ -63,14 +53,13 @@ nextApp.prepare().then(() => {
       express: app,
     });
 
-    // Set up storage for uploaded files
     const storage = multer.diskStorage({
       destination: async (req, file, cb) => {
         try {
           await fs.mkdir(UPLOADS_DIR, { recursive: true });
           cb(null, UPLOADS_DIR);
         } catch (err) {
-          cb(err as Error, UPLOADS_DIR); // Provide both arguments
+          cb(err as Error, UPLOADS_DIR);
         }
       },
       filename: (req, file, cb) => {
@@ -80,37 +69,31 @@ nextApp.prepare().then(() => {
 
     const upload = multer({ storage });
 
-    // MongoDB setup
     let db: Db;
     const mongoClient = new MongoClient(MONGO_URI);
     mongoClient.connect().then((client) => {
       db = client.db('fileUploadService');
       console.log('Connected to MongoDB');
-
-      // Synchronize the database with the uploads directory on startup
       synchronizeDatabaseWithUploads();
     }).catch(err => {
       console.error('Failed to connect to MongoDB:', err);
     });
 
-    // Redis setup
     const redisClient = new Redis({
       host: REDIS_HOST,
       port: REDIS_PORT,
       maxRetriesPerRequest: null,
-      enableReadyCheck: false
+      enableReadyCheck: false,
     });
 
-    // Function to synchronize the database with the uploads directory
     const synchronizeDatabaseWithUploads = async () => {
       try {
         const filesInDirectory = await fs.readdir(UPLOADS_DIR);
 
-        // Ensure all files in the directory have corresponding metadata in the database
         for (const fileName of filesInDirectory) {
           const filePath = path.join(UPLOADS_DIR, fileName);
           const fileStats = await fs.stat(filePath);
-          const creationDate = new Date(fileStats.birthtime).toISOString(); // Convert to ISO string
+          const creationDate = new Date(fileStats.birthtime).toISOString();
 
           const hash = crypto.createHash('md5');
           const fileStream = createReadStream(filePath);
@@ -128,7 +111,6 @@ nextApp.prepare().then(() => {
             const fileId = uuidv4();
             await db.collection('fileStatuses').insertOne({ fileId, fileName, checksum, creationDate, status: 'Uploaded' });
           } else {
-            // Update the creation date for existing files
             await db.collection('fileStatuses').updateOne(
               { fileName, checksum },
               { $set: { creationDate } }
@@ -136,7 +118,6 @@ nextApp.prepare().then(() => {
           }
         }
 
-        // Remove any metadata entries that do not have corresponding files in the directory
         const metadataEntries = await db.collection('fileStatuses').find().toArray();
         for (const entry of metadataEntries) {
           if (!filesInDirectory.includes(entry.fileName)) {
@@ -148,7 +129,6 @@ nextApp.prepare().then(() => {
       }
     };
 
-    // Endpoint to handle file uploads
     app.post('/upload', upload.single('file'), async (req, res) => {
       const file = req.file;
       if (!file) {
@@ -159,7 +139,7 @@ nextApp.prepare().then(() => {
         const fileId = uuidv4();
         const fileName = file.originalname;
         const fileStats = await fs.stat(file.path);
-        const creationDate = new Date(fileStats.birthtime).toISOString(); // Convert to ISO string
+        const creationDate = new Date(fileStats.birthtime).toISOString();
 
         const hash = crypto.createHash('md5');
         const fileStream = createReadStream(file.path);
@@ -172,14 +152,12 @@ nextApp.prepare().then(() => {
 
         const checksum = hash.digest('hex');
 
-        // Check if the file with the same name and checksum already exists
         const existingFile = await db.collection('fileStatuses').findOne({ fileName, checksum });
 
         if (existingFile) {
           return res.json({ message: 'File already exists', fileId: existingFile.fileId, fileName, checksum, creationDate });
         }
 
-        // Store the file ID, name, checksum, and creation date in the database
         await db.collection('fileStatuses').insertOne({ fileId, fileName, checksum, creationDate, status: 'Uploaded' });
 
         return res.json({ message: 'File uploaded successfully', fileId, fileName, checksum, creationDate });
@@ -189,7 +167,6 @@ nextApp.prepare().then(() => {
       }
     });
 
-    // Endpoint to get metadata for all uploaded files
     app.get('/files/metadata', async (req, res) => {
       try {
         const files = await db.collection('fileStatuses').find({}, { projection: { _id: 0, fileId: 1, fileName: 1, checksum: 1, creationDate: 1 } }).toArray();
@@ -200,7 +177,6 @@ nextApp.prepare().then(() => {
       }
     });
 
-    // Endpoint to delete a specific file
     app.delete('/files/:fileId', async (req, res) => {
       const { fileId } = req.params;
       try {
@@ -226,13 +202,10 @@ nextApp.prepare().then(() => {
       }
     });
 
-    // Endpoint to delete all files
     app.delete('/files/all', async (req, res) => {
       try {
-        // Read all files in the uploads directory
         const files = await fs.readdir(UPLOADS_DIR);
-        
-        // Delete each file
+
         for (const file of files) {
           try {
             await fs.unlink(path.join(UPLOADS_DIR, file));
@@ -242,7 +215,6 @@ nextApp.prepare().then(() => {
           }
         }
 
-        // Delete all file metadata from the database
         await db.collection('fileStatuses').deleteMany({});
 
         return res.json({ message: 'All files deleted successfully' });
@@ -252,16 +224,13 @@ nextApp.prepare().then(() => {
       }
     });
 
-    // Status endpoint to return API status
     app.get('/status', (req, res) => {
       return res.json({ status: 'Server is running' });
     });
 
-    // Create HTTP server and integrate with socket.io
     const server = http.createServer(app);
     const io = new Server(server);
 
-    // Handle socket.io connections
     io.on('connection', (socket) => {
       console.log('A user connected');
       socket.on('disconnect', () => {
@@ -269,7 +238,6 @@ nextApp.prepare().then(() => {
       });
     });
 
-    // Start the server
     server.listen(PORT, () => {
       console.log(`Server is running on http://localhost:${PORT}`);
     });
@@ -279,7 +247,6 @@ nextApp.prepare().then(() => {
     console.error('Failed to initialize server:', error);
   });
 
-  // Default catch-all handler to allow Next.js to handle all other routes
   app.all('*', (req, res) => {
     return handle(req, res);
   });

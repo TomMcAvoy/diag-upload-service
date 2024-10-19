@@ -1,8 +1,8 @@
 import path from 'path';
-import  en  from 'payload/i18n/en';
+import en from 'payload/i18ni/en';
 import richtextLexical from '@payloadcms/richtext-lexical'; // Import as default
 import { mongooseAdapter } from '@payloadcms/db-mongodb';
-import  buildConfig  from 'payload/config.js';
+import buildConfig from 'payload/config.js';
 import sharp from 'sharp';
 import { fileURLToPath } from 'url';
 
@@ -27,6 +27,53 @@ const {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+export const languages = [
+  {
+    name: 'German',
+    lang: 'de',
+    locale: 'de_CH',
+    labels: {
+      de: 'Deutsch',
+      en: 'German',
+      fr: 'Allemand',
+      it: 'Tedesco',
+    },
+  },
+  {
+    name: 'English',
+    lang: 'en',
+    locale: 'en_US',
+    labels: {
+      de: 'Englisch',
+      en: 'English',
+      fr: 'Anglais',
+      it: 'Inglese',
+    },
+  },
+  {
+    name: 'French',
+    lang: 'fr',
+    locale: 'fr_CH',
+    labels: {
+      de: 'Französisch',
+      en: 'French',
+      fr: 'Français',
+      it: 'Francese',
+    },
+  },
+  {
+    name: 'Italian',
+    lang: 'it',
+    locale: 'it_CH',
+    labels: {
+      de: 'Italienisch',
+      en: 'Italian',
+      fr: 'Italien',
+      it: 'Italiano',
+    },
+  },
+];
 
 export default buildConfig({
   editor: lexicalEditor(),
