@@ -5,7 +5,7 @@
   "description": "Diag Upload API",
   "main": "index.js",
   "scripts": {
-    "dev": "cross-env NODE_OPTIONS=\"--loader ts-node/esm --no-deprecation\" ts-node-dev --loader ts-node/esm src/server.ts",
+    "dev": "cross-env NODE_OPTIONS=\"--loader ts-node/esm --no-deprecation\" ts-node-dev --loader ts-node/esm dist/server.mjs",
     "build": "tsc && npm run postbuild",
     "postbuild": "mv dist/server.js dist/server.mjs",
     "start": "node dist/server.mjs",
