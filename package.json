@@ -6,8 +6,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "cross-env NODE_OPTIONS=\"--loader ts-node/esm --no-deprecation\" ts-node-dev --loader ts-node/esm src/server.ts",
-    "build": "tsc",
-    "start": "cross-env NODE_OPTIONS=--no-deprecation node dist/server.js", // Use server.mjs for ES modules
+    "build": "tsc && npm run postbuild",
+    "postbuild": "mv dist/server.js dist/server.mjs",
+    "start": "node dist/server.mjs",
     "test": "jest",
     "lint:fix": "eslint 'src/**/*.{ts,tsx}' --fix",
     "format": "prettier --write 'src/**/*.{ts,tsx,json,md}'",
@@ -16,7 +17,7 @@
     "deploy": "echo 'Deploy script here'",
     "webpack:start": "webpack serve --open",
     "webpack:build": "webpack",
-    "debug": "node --inspect-brk=9229 dist/server.js",
+    "debug": "node --inspect-brk=9229 dist/server.mjs",
     "ci": "payload migrate && pnpm build",
     "payload": "payload",
     "generate:types": "payload generate:types",

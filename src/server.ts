@@ -19,15 +19,15 @@ import payload from 'payload';
 import dotenv from 'dotenv';
 import next from 'next';
 
+
 dotenv.config();
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 const dev = process.env.NODE_ENV !== 'production';
 const nextApp = next({ dev });
 const handle = nextApp.getRequestHandler();
-
 const app = express();
 const PORT = process.env.PORT || 8000;
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
@@ -35,7 +35,10 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017';
 const REDIS_HOST = process.env.REDIS_HOST || 'localhost';
 const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379', 10);
 
+console.log('server.ts is being executed');
+
 nextApp.prepare().then(() => {
+
   /**
    * Enable CORS for all routes
    */
@@ -281,4 +284,3 @@ nextApp.prepare().then(() => {
     return handle(req, res);
   });
 });
-

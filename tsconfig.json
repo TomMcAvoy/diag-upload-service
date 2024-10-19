@@ -15,7 +15,7 @@
       "dom.iterable",
       "esnext"
     ],
-    "noEmit": false,
+    "noEmit": false, // Ensure this is set to false to allow emitting compiled files
     "incremental": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -26,7 +26,8 @@
     "src/next-env.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "src/server.ts"
+    "src/server.ts",
+    "src/*.ts/"
   ],
   "exclude": [
     "node_modules"
